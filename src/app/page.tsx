@@ -1,68 +1,210 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect, useCallback } from "react";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { QuickStatus } from "@/components/dashboard/QuickStatus";
+import { LocationSelector } from "@/components/alerts/LocationSelector";
+import { WarningStatusCard } from "@/components/alerts/WarningStatusCard";
+import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
+import { ExpiredWarningState } from "@/components/alerts/ExpiredWarningState";
+import { WarningUnavailableState } from "@/components/alerts/WarningUnavailableState";
+import { getTimeRemaining } from "@/lib/bmkg/temporal";
+import type { UserLocation, UserRole } from "@/types/user";
+import type { WarningMatchResult } from "@/types/bmkg";
+import type { ActionPlan } from "@/types/action";
+import { FlaskConical, MessageSquare, ShieldAlert } from "lucide-react";
+
+export default function DashboardPage() {
+  const [location, setLocation] = useState<UserLocation>({
+    province: "Jawa Timur",
+    city: "Surabaya",
+    district: "Sukolilo",
+  });
+
+  const [scenario, setScenario] = useState<"A" | "B" | "C" | "D" | "LIVE">("A");
+  const [matchResult, setMatchResult] = useState<WarningMatchResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(true);
+  const [scenarioName, setScenarioName] = useState<string | undefined>();
+  const [selectedRole, setSelectedRole] = useState<UserRole>("campus_operations");
+
+  // Fetch warnings whenever location or scenario changes
+  const loadWarnings = useCallback(async () => {
+    setLoading(true);
+    try {
+      let url = `/api/warnings?province=${encodeURIComponent(
+        location.province
+      )}&city=${encodeURIComponent(location.city)}&district=${encodeURIComponent(
+        location.district
+      )}`;
+
+      if (scenario !== "LIVE") {
+        url += `&scenario=${scenario}`;
+      } else {
+        url += `&forceRefresh=true`;
+      }
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      setMatchResult(data.matchResult);
+      setIsDemo(Boolean(data.isDemo));
+      setScenarioName(data.scenarioName);
+    } catch (err) {
+      console.error("Failed to load warnings:", err);
+      setMatchResult({
+        matched: false,
+        status: "unavailable",
+        warning: null,
+        matchedLocation: null,
+        confidence: "no_match",
+        matchedField: null,
+        reason: "Koneksi ke endpoint peringatan terganggu.",
+        source: "BMKG",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [location, scenario]);
+
+  useEffect(() => {
+    loadWarnings();
+  }, [loadWarnings]);
+
+  const activeWarning =
+    matchResult?.status === "active" ? matchResult.warning : null;
+  const timeRemaining = activeWarning
+    ? getTimeRemaining(activeWarning.expires).text
+    : undefined;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col">
+      <DashboardHeader isDemoMode={isDemo} scenarioName={scenarioName} />
+
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
+        {/* Scenario Selector Bar for Judges & Evaluators */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <FlaskConical className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
+            <span>Pilihan Skenario Evaluasi Hackathon:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setScenario("A")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "A"
+                  ? "bg-purple-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              Skenario A (Peringatan Aktif Sukolilo)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScenario("B")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "B"
+                  ? "bg-purple-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              Skenario B (Lokasi Tidak Cocok)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScenario("C")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "C"
+                  ? "bg-purple-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              Skenario C (Kedaluwarsa)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScenario("D")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "D"
+                  ? "bg-purple-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              Skenario D (BMKG Down)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScenario("LIVE")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "LIVE"
+                  ? "bg-blue-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              Live Feed BMKG
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Status Metrics Bar */}
+        <QuickStatus
+          activeWarningCount={matchResult?.status === "active" ? 1 : 0}
+          recommendedActionCount={matchResult?.status === "active" ? 5 : 0}
+          teamsToNotifyCount={matchResult?.status === "active" ? 2 : 0}
+          timeRemainingText={timeRemaining}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        {/* Location Selector */}
+        <LocationSelector
+          currentLocation={location}
+          onLocationChange={(newLoc) => setLocation(newLoc)}
+        />
+
+        {/* Main Warning State Area */}
+        <div id="warning-section">
+          {loading ? (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center animate-pulse">
+              <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mx-auto mb-2" />
+              <div className="h-3 bg-slate-100 dark:bg-slate-700/50 rounded w-1/2 mx-auto" />
+            </div>
+          ) : matchResult ? (
+            <>
+              {matchResult.status === "active" && (
+                <WarningStatusCard
+                  matchResult={matchResult}
+                  onGenerateActionPlan={() => {
+                    const el = document.getElementById("action-plan-section");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                  }}
+                />
+              )}
+
+              {matchResult.status === "no_match" && (
+                <EmptyWarningState
+                  location={location}
+                  onRefresh={loadWarnings}
+                />
+              )}
+
+              {matchResult.status === "expired" && matchResult.warning && (
+                <ExpiredWarningState
+                  warning={matchResult.warning}
+                  onRefresh={loadWarnings}
+                />
+              )}
+
+              {matchResult.status === "unavailable" && (
+                <WarningUnavailableState onRetry={loadWarnings} />
+              )}
+            </>
+          ) : null}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {/* Anchor placeholder for Action Planning (Task 9 & 10) */}
+        <div id="action-plan-section" />
       </main>
     </div>
   );
