@@ -246,13 +246,18 @@ export class MockAgentProvider implements AgentProvider {
         const remote = await langflowClient.runFlow(env.LANGFLOW_FLOW_ID, userText);
         const resultOutputs = remote.result?.outputs as Array<{
           outputs?: Array<{
-            results?: { message?: { text?: string } };
-            artifacts?: { message?: string };
+            results?: { message?: { text?: string }; text?: string };
+            artifacts?: { message?: string | { text?: string }; text?: string };
           }>;
         }> | undefined;
+        const firstOut = resultOutputs?.[0]?.outputs?.[0];
+        const rawArtifactMsg = firstOut?.artifacts?.message;
+        const artifactText = typeof rawArtifactMsg === "string" ? rawArtifactMsg : rawArtifactMsg?.text;
         const generatedText =
-          resultOutputs?.[0]?.outputs?.[0]?.results?.message?.text ||
-          resultOutputs?.[0]?.outputs?.[0]?.artifacts?.message;
+          firstOut?.results?.message?.text ||
+          firstOut?.results?.text ||
+          artifactText ||
+          firstOut?.artifacts?.text;
 
         if (generatedText) {
           return {
