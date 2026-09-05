@@ -76,3 +76,15 @@ export const notifyConfirmedTeamOutputSchema = z.object({
   timestamp: z.string(),
   message: z.string(),
 });
+
+// Tool 4: get_latest_earthquake
+export const getLatestEarthquakeInputSchema = z.object({
+  forceRefresh: z.boolean().optional().default(false),
+});
+
+// Tool 5: get_weather_forecast
+export const getWeatherForecastInputSchema = z.object({
+  city: z.string().default("Surabaya"),
+  district: z.string().default("Sukolilo"),
+  adm4: z.string().optional(),
+});

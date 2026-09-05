@@ -29,12 +29,13 @@ function generateMessageId(prefix: string) {
 const INITIAL_MESSAGE: ChatMessage = {
   id: "init-1",
   sender: "assistant",
-  text: `Halo! Saya **SIAGA Copilot**, asisten percakapan Anda (didukung oleh **IBM Bob** & workflow **Langflow**).\n\nSaya siap membantu Anda memeriksa peringatan resmi BMKG, mencocokkan dampak ke lokasi kampus, dan menyusun SOP kesiapsiagaan darurat.`,
+  text: `Halo! Saya **SIAGA Copilot**, asisten percakapan Anda (didukung oleh **IBM Bob** & workflow **Langflow**).\n\nSaya siap membantu Anda memeriksa peringatan resmi BMKG (cuaca ekstrem & gempabumi), prakiraan cuaca wilayah, dan menyusun SOP kesiapsiagaan darurat kampus.`,
   timestamp: "2026-09-05T13:00:00.000Z",
   quickReplies: [
-    { label: "Cek Peringatan Kampus PENS", payload: "Cek peringatan cuaca kampus saya" },
-    { label: "Susun Action Plan Event", payload: "role:event_organizer" },
-    { label: "SOP Operasional Kampus", payload: "role:campus_operations" },
+    { label: "Cek Peringatan Cuaca Kampus", payload: "Cek peringatan cuaca kampus saya" },
+    { label: "Gempa Terkini BMKG", payload: "Cek info gempa bumi terkini" },
+    { label: "Prakiraan Cuaca Hari Ini", payload: "Bagaimana prakiraan cuaca hari ini?" },
+    { label: "SOP Kesiapsiagaan Kampus", payload: "role:campus_operations" },
   ],
 };
 

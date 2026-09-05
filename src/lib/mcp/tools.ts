@@ -150,3 +150,52 @@ export async function executeNotifyConfirmedTeam(rawInput: unknown) {
     message: `Pemberitahuan darurat berhasil dikirimkan ke ${input.recipients.length} penerima melalui kanal ${input.channel}.`,
   };
 }
+
+export async function executeGetLatestEarthquake() {
+  const { fetchLatestEarthquake } = await import("@/lib/bmkg/earthquake");
+  const data = await fetchLatestEarthquake();
+  if (!data) {
+    return {
+      success: false,
+      message: "Data gempabumi BMKG sedang tidak dapat diakses.",
+      source: "BMKG",
+    };
+  }
+  return {
+    success: true,
+    magnitude: data.magnitude,
+    depth: data.depth,
+    region: data.region,
+    time: data.time,
+    potential: data.potential,
+    is_tsunami_potential: data.isTsunamiPotential,
+    source: "BMKG",
+  };
+}
+
+export async function executeGetWeatherForecast(rawInput?: unknown) {
+  const { getWeatherForecastInputSchema } = await import("./schemas");
+  const input = getWeatherForecastInputSchema.parse(rawInput || {});
+  const { fetchWeatherForecast, resolveAdm4Code } = await import("@/lib/bmkg/forecast");
+  const adm4 = input.adm4 || resolveAdm4Code(input.city, input.district);
+  const data = await fetchWeatherForecast(adm4);
+  if (!data || !data.current) {
+    return {
+      success: false,
+      message: `Prakiraan cuaca untuk Kec. ${input.district}, ${input.city} tidak tersedia saat ini.`,
+      source: "BMKG",
+    };
+  }
+  return {
+    success: true,
+    location: `${data.village}, Kec. ${data.district}, ${data.city}`,
+    temperature_c: data.current.temperature,
+    humidity_percent: data.current.humidity,
+    weather_condition: data.current.weatherDesc,
+    wind_speed_kmh: data.current.windSpeed,
+    wind_direction: data.current.windDirection,
+    time: data.current.timeFormatted,
+    source: "BMKG",
+  };
+}
+

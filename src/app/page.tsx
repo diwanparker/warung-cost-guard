@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { QuickStatus } from "@/components/dashboard/QuickStatus";
+import { EarthquakeTicker } from "@/components/dashboard/EarthquakeTicker";
+import { WeatherForecastCard } from "@/components/dashboard/WeatherForecastCard";
 import { LocationSelector } from "@/components/alerts/LocationSelector";
 import { WarningStatusCard } from "@/components/alerts/WarningStatusCard";
 import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
@@ -137,6 +139,9 @@ export default function DashboardPage() {
       <DashboardHeader isDemoMode={isDemo} scenarioName={scenarioName} />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
+        {/* Real-time BMKG TEWS Earthquake Banner */}
+        <EarthquakeTicker />
+
         {/* Scenario Selector Bar for Judges & Evaluators */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -216,6 +221,9 @@ export default function DashboardPage() {
           currentLocation={location}
           onLocationChange={(newLoc) => setLocation(newLoc)}
         />
+
+        {/* BMKG 3-Day Weather Forecast Baseline Ribbon */}
+        <WeatherForecastCard city={location.city} district={location.district} />
 
         {/* Main Warning State Area */}
         <div id="warning-section">

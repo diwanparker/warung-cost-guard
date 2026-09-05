@@ -19,6 +19,58 @@ export class MockAgentProvider implements AgentProvider {
     const scenario = demoWarnings[scenarioKey];
     const matchResult = scenario.getMatchResult(context.location);
 
+    // 0. User asks about earthquake (gempa)
+    if (text.includes("gempa") || text.includes("earthquake") || text.includes("tsunami")) {
+      return {
+        id,
+        sender: "assistant",
+        text: `📡 **Informasi BMKG TEWS Gempabumi Terkini:**\n\n* **Magnitudo:** M 4.3\n* **Lokasi:** Laut 92 km Selatan Bone Bolango\n* **Kedalaman:** 124 km\n* **Potensi:** Tidak berpotensi tsunami\n* **Waktu:** 13:34:49 WIB\n\n🛡️ **Panduan Tanggap Darurat Kampus (K3L):**\n1. **Saat Guncangan:** Lakukan *Drop, Cover, Hold On* di bawah meja kokoh.\n2. **Evakuasi:** Turun melalui tangga darurat menuju Titik Kumpul Aman. **DILARANG MENGGUNAKAN LIFT!**\n3. **Inspeksi:** Periksa instalasi listrik & gas sebelum memasuki gedung kembali.`,
+        timestamp,
+        toolCalls: [
+          {
+            name: "get_latest_earthquake",
+            args: { forceRefresh: false },
+            status: "completed",
+          },
+        ],
+        quickReplies: [
+          { label: "Lihat SOP Gempa Kampus", payload: "sop:earthquake" },
+          { label: "Cek Peringatan Cuaca", payload: "Cek peringatan cuaca kampus saya" },
+        ],
+      };
+    }
+
+    // 0.1 User asks about 3-day weather forecast (prakiraan cuaca / suhu)
+    if (
+      text.includes("prakiraan") ||
+      text.includes("suhu") ||
+      text.includes("ramalan") ||
+      text.includes("panas") ||
+      text.includes("hujan hari ini") ||
+      text.includes("besok")
+    ) {
+      return {
+        id,
+        sender: "assistant",
+        text: `🌤️ **Data Resmi BMKG Prakiraan Cuaca 3-Harian:**\n\nWilayah **Kec. ${context.location.district}, ${context.location.city}**:\n* **Suhu Saat Ini:** 31°C\n* **Kondisi:** Cerah Berawan\n* **Kelembapan:** 51%\n* **Kecepatan Angin:** 12.5 km/jam (Arah Utara)\n* **Jarak Pandang:** > 10 km\n\nℹ️ *Catatan Responsible AI:* Data ini adalah baseline cuaca reguler non-darurat. Untuk kesiapsiagaan operasional darurat, selalu rujuk Peringatan Dini Cuaca Ekstrem BMKG di dashboard.`,
+        timestamp,
+        toolCalls: [
+          {
+            name: "get_weather_forecast",
+            args: {
+              city: context.location.city,
+              district: context.location.district,
+            },
+            status: "completed",
+          },
+        ],
+        quickReplies: [
+          { label: "Cek Peringatan Ekstrem BMKG", payload: "Cek peringatan cuaca kampus saya" },
+          { label: "Cek Gempa Terkini", payload: "Cek gempa terkini BMKG" },
+        ],
+      };
+    }
+
     // 1. User asks about warnings or greetings
     if (
       text.includes("warning") ||
