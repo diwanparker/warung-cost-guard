@@ -9,13 +9,14 @@ import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
 import { ExpiredWarningState } from "@/components/alerts/ExpiredWarningState";
 import { WarningUnavailableState } from "@/components/alerts/WarningUnavailableState";
 import { ActionPlanCard } from "@/components/actions/ActionPlanCard";
+import { ConfirmationDialog } from "@/components/actions/ConfirmationDialog";
 import { CopilotPanel } from "@/components/chat/CopilotPanel";
 import { buildRoleActionPlan } from "@/lib/actions/planner";
-import { getTimeRemaining } from "@/lib/bmkg/temporal";
+import { getTimeRemaining, formatWibTime } from "@/lib/bmkg/temporal";
 import type { UserLocation, UserRole } from "@/types/user";
 import type { WarningMatchResult } from "@/types/bmkg";
 import type { ActionPlan } from "@/types/action";
-import { FlaskConical, MessageSquare, ShieldAlert } from "lucide-react";
+import { FlaskConical, MessageSquare, ShieldAlert, CheckCircle2 } from "lucide-react";
 
 export default function DashboardPage() {
   const [location, setLocation] = useState<UserLocation>({
@@ -33,6 +34,25 @@ export default function DashboardPage() {
   const [isOutdoorEvent, setIsOutdoorEvent] = useState(false);
   const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [notificationSent, setNotificationSent] = useState(false);
+
+  const handleConfirmNotification = async (recipients: string[], message: string) => {
+    const res = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        confirmed: true,
+        recipients,
+        message,
+        channel: "email",
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setNotificationSent(true);
+    }
+  };
 
   // Fetch warnings whenever location or scenario changes
   const loadWarnings = useCallback(async () => {
@@ -223,7 +243,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Action Plan Section */}
-        <div id="action-plan-section">
+        <div id="action-plan-section" className="space-y-4">
+          {notificationSent && (
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden="true" />
+                <div className="text-xs">
+                  <strong className="block font-bold">Status Eksekusi Selesai:</strong>
+                  <span>✓ Tim Lapangan Telah Dinotifikasi &nbsp;|&nbsp; ✓ Rencana Tindakan Terdaftar &nbsp;|&nbsp; ● Monitoring BMKG Aktif</span>
+                </div>
+              </div>
+              <span className="text-[11px] font-mono bg-emerald-200/60 dark:bg-emerald-900 px-2.5 py-1 rounded text-emerald-800 dark:text-emerald-200 font-semibold self-start sm:self-auto">
+                LOG ID: NOTIF-{Date.now().toString().slice(-6)}
+              </span>
+            </div>
+          )}
+
           {actionPlan && matchResult?.status === "active" && (
             <ActionPlanCard
               actionPlan={actionPlan}
@@ -231,15 +266,23 @@ export default function DashboardPage() {
               onRoleChange={(newRole) => setSelectedRole(newRole)}
               isOutdoorEvent={isOutdoorEvent}
               onOutdoorToggle={(outdoor) => setIsOutdoorEvent(outdoor)}
-              onOpenConfirmation={() => {
-                alert(
-                  "Konfirmasi Dibutuhkan:\nPesan akan dikirim ke Tim Keamanan & Panitia Acara.\n(Fitur ini terhubung penuh pada modal Task 13)"
-                );
-              }}
+              onOpenConfirmation={() => setIsConfirmOpen(true)}
             />
           )}
         </div>
       </main>
+
+      {/* Confirmation Modal */}
+      <ConfirmationDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirmNotification}
+        defaultMessage={
+          matchResult?.warning
+            ? `Peringatan Dini Cuaca BMKG (${matchResult.warning.event}) aktif untuk wilayah ${location.district}, ${location.city} hingga pukul ${formatWibTime(matchResult.warning.expires)} WIB. Harap segera laksanakan SOP mitigasi kesiapsiagaan darurat.`
+            : "Peringatan cuaca BMKG aktif. Harap tindak lanjuti SOP kesiapsiagaan."
+        }
+      />
 
       {/* IBM Bob Copilot Side Panel / Toggle */}
       <CopilotPanel
