@@ -1,6 +1,8 @@
 import { createDynamicDemoWarnings } from "@/data/demo/scenarios";
 import { buildRoleActionPlan } from "@/lib/actions/planner";
 import { formatWibRange } from "@/lib/bmkg/temporal";
+import { getEnv } from "@/lib/env";
+import { langflowClient } from "@/lib/langflow/client";
 import type { AgentProvider, ChatMessage, ChatContext } from "./types";
 import type { UserRole } from "@/types/user";
 
@@ -235,6 +237,45 @@ export class MockAgentProvider implements AgentProvider {
         text: `Tindakan pengiriman dibatalkan. Tidak ada pesan atau notifikasi eksternal yang dikirimkan. Rencana tindakan tetap tersimpan di dashboard untuk tinjauan internal Anda.`,
         timestamp,
       };
+    }
+
+    // Try live Langflow flow execution if available
+    const env = getEnv();
+    if (env.LANGFLOW_FLOW_ID) {
+      try {
+        const remote = await langflowClient.runFlow(env.LANGFLOW_FLOW_ID, userText);
+        const resultOutputs = remote.result?.outputs as Array<{
+          outputs?: Array<{
+            results?: { message?: { text?: string } };
+            artifacts?: { message?: string };
+          }>;
+        }> | undefined;
+        const generatedText =
+          resultOutputs?.[0]?.outputs?.[0]?.results?.message?.text ||
+          resultOutputs?.[0]?.outputs?.[0]?.artifacts?.message;
+
+        if (generatedText) {
+          return {
+            id,
+            sender: "assistant",
+            text: generatedText,
+            timestamp,
+            toolCalls: [
+              {
+                name: "langflow_workflow_run",
+                args: { flowId: env.LANGFLOW_FLOW_ID, input: userText },
+                status: "completed",
+              },
+            ],
+            quickReplies: [
+              { label: "Cek Peringatan Cuaca", payload: "Cek peringatan cuaca kampus saya" },
+              { label: "Cek Gempa Terkini", payload: "Cek gempa terkini BMKG" },
+            ],
+          };
+        }
+      } catch {
+        // Fall back to default guidance
+      }
     }
 
     // Default fallback guidance

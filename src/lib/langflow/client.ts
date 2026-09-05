@@ -18,7 +18,7 @@ export class LangflowClient {
 
   async runFlow(
     flowId: string,
-    inputs: Record<string, unknown>
+    inputs: Record<string, unknown> | string
   ): Promise<LangflowRunResponse> {
     const url = `${this.baseUrl}/api/v1/run/${flowId}`;
 
@@ -34,10 +34,16 @@ export class LangflowClient {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+      const inputValue = typeof inputs === "string" ? inputs : JSON.stringify(inputs);
+
       const res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ input_value: inputs }),
+        body: JSON.stringify({
+          input_value: inputValue,
+          input_type: "chat",
+          output_type: "chat",
+        }),
         signal: controller.signal,
       });
 
