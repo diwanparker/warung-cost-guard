@@ -9,6 +9,7 @@ import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
 import { ExpiredWarningState } from "@/components/alerts/ExpiredWarningState";
 import { WarningUnavailableState } from "@/components/alerts/WarningUnavailableState";
 import { ActionPlanCard } from "@/components/actions/ActionPlanCard";
+import { CopilotPanel } from "@/components/chat/CopilotPanel";
 import { buildRoleActionPlan } from "@/lib/actions/planner";
 import { getTimeRemaining } from "@/lib/bmkg/temporal";
 import type { UserLocation, UserRole } from "@/types/user";
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("campus_operations");
   const [isOutdoorEvent, setIsOutdoorEvent] = useState(false);
   const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fetch warnings whenever location or scenario changes
   const loadWarnings = useCallback(async () => {
@@ -238,6 +240,16 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* IBM Bob Copilot Side Panel / Toggle */}
+      <CopilotPanel
+        location={location}
+        role={selectedRole}
+        scenario={scenario}
+        isOutdoorEvent={isOutdoorEvent}
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
     </div>
   );
 }
