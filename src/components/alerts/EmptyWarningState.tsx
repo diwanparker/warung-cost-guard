@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, ShieldCheck, RefreshCw } from "lucide-react";
+import { CheckCircle2, RefreshCw } from "lucide-react";
 import { OfficialSourceBadge } from "../shared/OfficialSourceBadge";
 import type { UserLocation } from "@/types/user";
 

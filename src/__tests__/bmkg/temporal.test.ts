@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   getWarningStatus,
-  formatWibTime,
   formatWibRange,
   getTimeRemaining,
 } from "@/lib/bmkg/temporal";

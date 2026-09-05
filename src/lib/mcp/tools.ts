@@ -5,7 +5,7 @@ import {
 } from "./schemas";
 import { fetchBmkgWarnings } from "@/lib/bmkg/client";
 import { matchLocation } from "@/lib/bmkg/matcher";
-import { getWarningStatus, formatWibTime } from "@/lib/bmkg/temporal";
+import { getWarningStatus } from "@/lib/bmkg/temporal";
 import { buildRoleActionPlan } from "@/lib/actions/planner";
 import { createDynamicDemoWarnings } from "@/data/demo/scenarios";
 import { getEnv } from "@/lib/env";
@@ -87,7 +87,7 @@ export async function executeGetActiveWarning(rawInput: unknown) {
       reason: `Tidak ditemukan peringatan aktif untuk Kec. ${input.district}, ${input.city}.`,
       status: "no_match" as const,
     };
-  } catch (err) {
+  } catch {
     return {
       matched: false,
       source: "BMKG" as const,

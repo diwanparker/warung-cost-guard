@@ -6,7 +6,6 @@ import {
   FileText,
   ArrowRight,
   ShieldCheck,
-  CheckCircle,
 } from "lucide-react";
 import { OfficialSourceBadge } from "../shared/OfficialSourceBadge";
 import { StatusBadge } from "../shared/StatusBadge";
@@ -27,7 +26,7 @@ export const WarningStatusCard: React.FC<WarningStatusCardProps> = ({
 }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const { warning, matchedLocation, reason, status, confidence } = matchResult;
+  const { warning, matchedLocation, reason, status } = matchResult;
   if (!warning) return null;
 
   const timeRemaining = getTimeRemaining(warning.expires);

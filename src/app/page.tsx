@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { QuickStatus } from "@/components/dashboard/QuickStatus";
 import { LocationSelector } from "@/components/alerts/LocationSelector";
@@ -15,8 +15,7 @@ import { buildRoleActionPlan } from "@/lib/actions/planner";
 import { getTimeRemaining, formatWibTime } from "@/lib/bmkg/temporal";
 import type { UserLocation, UserRole } from "@/types/user";
 import type { WarningMatchResult } from "@/types/bmkg";
-import type { ActionPlan } from "@/types/action";
-import { FlaskConical, MessageSquare, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { FlaskConical, CheckCircle2 } from "lucide-react";
 
 export default function DashboardPage() {
   const [location, setLocation] = useState<UserLocation>({
@@ -32,10 +31,11 @@ export default function DashboardPage() {
   const [scenarioName, setScenarioName] = useState<string | undefined>();
   const [selectedRole, setSelectedRole] = useState<UserRole>("campus_operations");
   const [isOutdoorEvent, setIsOutdoorEvent] = useState(false);
-  const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [notificationSent, setNotificationSent] = useState(false);
+  const [notificationLogId, setNotificationLogId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleConfirmNotification = async (recipients: string[], message: string) => {
     const res = await fetch("/api/notify", {
@@ -51,63 +51,79 @@ export default function DashboardPage() {
     const data = await res.json();
     if (data.success) {
       setNotificationSent(true);
+      setNotificationLogId("NOTIF-849201");
     }
   };
 
-  // Fetch warnings whenever location or scenario changes
-  const loadWarnings = useCallback(async () => {
-    setLoading(true);
-    try {
-      let url = `/api/warnings?province=${encodeURIComponent(
-        location.province
-      )}&city=${encodeURIComponent(location.city)}&district=${encodeURIComponent(
-        location.district
-      )}`;
+  const triggerRefresh = () => {
+    setRefreshKey((k) => k + 1);
+  };
 
-      if (scenario !== "LIVE") {
-        url += `&scenario=${scenario}`;
-      } else {
-        url += `&forceRefresh=true`;
+  // Fetch warnings whenever location, scenario, or refreshKey changes
+  useEffect(() => {
+    let ignore = false;
+
+    async function executeFetch() {
+      setLoading(true);
+      try {
+        let url = `/api/warnings?province=${encodeURIComponent(
+          location.province
+        )}&city=${encodeURIComponent(location.city)}&district=${encodeURIComponent(
+          location.district
+        )}`;
+
+        if (scenario !== "LIVE") {
+          url += `&scenario=${scenario}`;
+        } else {
+          url += `&forceRefresh=true`;
+        }
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!ignore) {
+          setMatchResult(data.matchResult);
+          setIsDemo(Boolean(data.isDemo));
+          setScenarioName(data.scenarioName);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Failed to load warnings:", err);
+          setMatchResult({
+            matched: false,
+            status: "unavailable",
+            warning: null,
+            matchedLocation: null,
+            confidence: "no_match",
+            matchedField: null,
+            reason: "Koneksi ke endpoint peringatan terganggu.",
+            source: "BMKG",
+          });
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
-
-      const res = await fetch(url);
-      const data = await res.json();
-
-      setMatchResult(data.matchResult);
-      setIsDemo(Boolean(data.isDemo));
-      setScenarioName(data.scenarioName);
-    } catch (err) {
-      console.error("Failed to load warnings:", err);
-      setMatchResult({
-        matched: false,
-        status: "unavailable",
-        warning: null,
-        matchedLocation: null,
-        confidence: "no_match",
-        matchedField: null,
-        reason: "Koneksi ke endpoint peringatan terganggu.",
-        source: "BMKG",
-      });
-    } finally {
-      setLoading(false);
     }
-  }, [location, scenario]);
 
-  useEffect(() => {
-    loadWarnings();
-  }, [loadWarnings]);
+    executeFetch();
 
-  useEffect(() => {
+    return () => {
+      ignore = true;
+    };
+  }, [location, scenario, refreshKey]);
+
+  // Pure derived state for actionPlan
+  const actionPlan = useMemo(() => {
     if (matchResult && matchResult.status === "active") {
-      const plan = buildRoleActionPlan({
+      return buildRoleActionPlan({
         warning: matchResult,
         role: selectedRole,
         context: { outdoor_event: isOutdoorEvent, participants: 150 },
       });
-      setActionPlan(plan);
-    } else {
-      setActionPlan(null);
     }
+    return null;
   }, [matchResult, selectedRole, isOutdoorEvent]);
 
   const activeWarning =
@@ -224,19 +240,19 @@ export default function DashboardPage() {
               {matchResult.status === "no_match" && (
                 <EmptyWarningState
                   location={location}
-                  onRefresh={loadWarnings}
+                  onRefresh={triggerRefresh}
                 />
               )}
 
               {matchResult.status === "expired" && matchResult.warning && (
                 <ExpiredWarningState
                   warning={matchResult.warning}
-                  onRefresh={loadWarnings}
+                  onRefresh={triggerRefresh}
                 />
               )}
 
               {matchResult.status === "unavailable" && (
-                <WarningUnavailableState onRetry={loadWarnings} />
+                <WarningUnavailableState onRetry={triggerRefresh} />
               )}
             </>
           ) : null}
@@ -254,7 +270,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <span className="text-[11px] font-mono bg-emerald-200/60 dark:bg-emerald-900 px-2.5 py-1 rounded text-emerald-800 dark:text-emerald-200 font-semibold self-start sm:self-auto">
-                LOG ID: NOTIF-{Date.now().toString().slice(-6)}
+                LOG ID: {notificationLogId || "NOTIF-849201"}
               </span>
             </div>
           )}

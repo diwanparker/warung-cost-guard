@@ -1,4 +1,4 @@
-import type { UserLocation, UserRole } from "./user";
+import type { UserRole } from "./user";
 import type { WarningMatchResult } from "./bmkg";
 import type { ActionPlan, NotificationRequest, NotificationResult } from "./action";
 
@@ -33,11 +33,11 @@ export interface McpToolBuildActionPlanInput {
   };
 }
 
-export interface McpToolBuildActionPlanOutput extends ActionPlan {}
+export type McpToolBuildActionPlanOutput = ActionPlan;
 
-export interface McpToolNotifyInput extends NotificationRequest {}
+export type McpToolNotifyInput = NotificationRequest;
 
-export interface McpToolNotifyOutput extends NotificationResult {}
+export type McpToolNotifyOutput = NotificationResult;
 
 export type McpToolName =
   | "get_active_bmkg_warning"

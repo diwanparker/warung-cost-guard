@@ -1,6 +1,6 @@
 import { createDynamicDemoWarnings } from "@/data/demo/scenarios";
 import { buildRoleActionPlan } from "@/lib/actions/planner";
-import { formatWibTime, formatWibRange } from "@/lib/bmkg/temporal";
+import { formatWibRange } from "@/lib/bmkg/temporal";
 import type { AgentProvider, ChatMessage, ChatContext } from "./types";
 import type { UserRole } from "@/types/user";
 

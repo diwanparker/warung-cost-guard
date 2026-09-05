@@ -2,11 +2,9 @@ import React, { useState } from "react";
 import {
   ListChecks,
   AlertOctagon,
-  ShieldAlert,
   Send,
   BookOpen,
   Users,
-  CheckCircle2,
 } from "lucide-react";
 import { RoleSelector } from "./RoleSelector";
 import { ActionChecklist } from "./ActionChecklist";
@@ -32,41 +30,43 @@ export const ActionPlanCard: React.FC<ActionPlanCardProps> = ({
   onOpenConfirmation,
   className = "",
 }) => {
-  const [actions, setActions] = useState(actionPlan);
-
-  // Sync state if actionPlan prop updates
-  React.useEffect(() => {
-    setActions(actionPlan);
-  }, [actionPlan]);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const toggleAction = (id: string) => {
-    setActions((prev) => {
-      const updateList = (list: typeof prev.priorityActions) =>
-        list.map((item) =>
-          item.id === id ? { ...item, completed: !item.completed } : item
-        );
-
-      return {
-        ...prev,
-        priorityActions: updateList(prev.priorityActions),
-        recommendedActions: updateList(prev.recommendedActions),
-        monitoring: updateList(prev.monitoring),
-      };
+    setCompletedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
     });
   };
 
+  const mapWithCompleted = (items: typeof actionPlan.priorityActions) =>
+    items.map((item) => ({
+      ...item,
+      completed: completedIds.has(item.id),
+    }));
+
+  const priorityActions = mapWithCompleted(actionPlan.priorityActions);
+  const recommendedActions = mapWithCompleted(actionPlan.recommendedActions);
+  const monitoringActions = mapWithCompleted(actionPlan.monitoring);
+
   const totalActions =
-    actions.priorityActions.length +
-    actions.recommendedActions.length +
-    actions.monitoring.length;
+    priorityActions.length +
+    recommendedActions.length +
+    monitoringActions.length;
 
   const completedActions = [
-    ...actions.priorityActions,
-    ...actions.recommendedActions,
-    ...actions.monitoring,
+    ...priorityActions,
+    ...recommendedActions,
+    ...monitoringActions,
   ].filter((a) => a.completed).length;
 
-  const progressPct = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
+  const progressPct =
+    totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
 
   return (
     <div
@@ -135,31 +135,31 @@ export const ActionPlanCard: React.FC<ActionPlanCardProps> = ({
       {/* Executive Summary & Risk Context */}
       <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
         <div className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-          {actions.summary}
+          {actionPlan.summary}
         </div>
         <div className="text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-2">
           <strong className="text-slate-700 dark:text-slate-300">Penilaian Risiko: </strong>
-          {actions.riskContext}
+          {actionPlan.riskContext}
         </div>
       </div>
 
       {/* Prioritized Checklist */}
       <ActionChecklist
-        priorityActions={actions.priorityActions}
-        recommendedActions={actions.recommendedActions}
-        monitoringActions={actions.monitoring}
+        priorityActions={priorityActions}
+        recommendedActions={recommendedActions}
+        monitoringActions={monitoringActions}
         onToggleAction={toggleAction}
       />
 
       {/* Prohibitions (Hal yang Dilarang) */}
-      {actions.doNotDo.length > 0 && (
+      {actionPlan.doNotDo.length > 0 && (
         <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50">
           <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-1.5 mb-2">
             <AlertOctagon className="w-4 h-4 text-rose-600" aria-hidden="true" />
             <span>Tindakan Terlarang (Hal yang Tidak Boleh Dilakukan):</span>
           </h4>
           <ul className="space-y-1 text-xs text-rose-700 dark:text-rose-300 list-disc list-inside">
-            {actions.doNotDo.map((dnd, idx) => (
+            {actionPlan.doNotDo.map((dnd, idx) => (
               <li key={idx} className="leading-relaxed">
                 {dnd}
               </li>
@@ -175,7 +175,7 @@ export const ActionPlanCard: React.FC<ActionPlanCardProps> = ({
           <span>Dasar Dokumen SOP Resmi yang Dirujuk:</span>
         </div>
         <div className="space-y-0.5 pl-5">
-          {actions.sopSources.map((src, idx) => (
+          {actionPlan.sopSources.map((src, idx) => (
             <div key={idx}>• {src}</div>
           ))}
         </div>

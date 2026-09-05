@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldAlert, Activity } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { DemoModeBadge } from "../shared/DemoModeBadge";
 
 interface DashboardHeaderProps {

@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, ShieldCheck, AlertOctagon, HelpCircle } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
 import type { RecommendedAction, ActionPriority } from "@/types/action";
 
 interface ActionChecklistProps {

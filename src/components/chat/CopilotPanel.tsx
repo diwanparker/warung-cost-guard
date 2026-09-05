@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  MessageSquare,
   X,
   Send,
   Bot,
   User,
   Wrench,
-  ShieldCheck,
   RotateCcw,
   Sparkles,
 } from "lucide-react";
@@ -23,11 +21,16 @@ interface CopilotPanelProps {
   className?: string;
 }
 
+let messageSeq = 1;
+function generateMessageId(prefix: string) {
+  return `${prefix}-${messageSeq++}`;
+}
+
 const INITIAL_MESSAGE: ChatMessage = {
   id: "init-1",
   sender: "assistant",
   text: `Halo! Saya **SIAGA Copilot**, asisten percakapan Anda (didukung oleh **IBM Bob** & workflow **Langflow**).\n\nSaya siap membantu Anda memeriksa peringatan resmi BMKG, mencocokkan dampak ke lokasi kampus, dan menyusun SOP kesiapsiagaan darurat.`,
-  timestamp: new Date().toISOString(),
+  timestamp: "2026-09-05T13:00:00.000Z",
   quickReplies: [
     { label: "Cek Peringatan Kampus PENS", payload: "Cek peringatan cuaca kampus saya" },
     { label: "Susun Action Plan Event", payload: "role:event_organizer" },
@@ -64,7 +67,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
     if (!message.trim() || isTyping) return;
 
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: generateMessageId("user"),
       sender: "user",
       text: message,
       timestamp: new Date().toISOString(),
@@ -101,7 +104,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
       setMessages((prev) => [
         ...prev,
         {
-          id: `err-${Date.now()}`,
+          id: generateMessageId("err"),
           sender: "system",
           text: "Gagal terhubung ke layanan Copilot. Silakan coba kembali.",
           timestamp: new Date().toISOString(),
