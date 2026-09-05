@@ -8,6 +8,8 @@ import { WarningStatusCard } from "@/components/alerts/WarningStatusCard";
 import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
 import { ExpiredWarningState } from "@/components/alerts/ExpiredWarningState";
 import { WarningUnavailableState } from "@/components/alerts/WarningUnavailableState";
+import { ActionPlanCard } from "@/components/actions/ActionPlanCard";
+import { buildRoleActionPlan } from "@/lib/actions/planner";
 import { getTimeRemaining } from "@/lib/bmkg/temporal";
 import type { UserLocation, UserRole } from "@/types/user";
 import type { WarningMatchResult } from "@/types/bmkg";
@@ -27,6 +29,8 @@ export default function DashboardPage() {
   const [isDemo, setIsDemo] = useState(true);
   const [scenarioName, setScenarioName] = useState<string | undefined>();
   const [selectedRole, setSelectedRole] = useState<UserRole>("campus_operations");
+  const [isOutdoorEvent, setIsOutdoorEvent] = useState(false);
+  const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
 
   // Fetch warnings whenever location or scenario changes
   const loadWarnings = useCallback(async () => {
@@ -70,6 +74,19 @@ export default function DashboardPage() {
   useEffect(() => {
     loadWarnings();
   }, [loadWarnings]);
+
+  useEffect(() => {
+    if (matchResult && matchResult.status === "active") {
+      const plan = buildRoleActionPlan({
+        warning: matchResult,
+        role: selectedRole,
+        context: { outdoor_event: isOutdoorEvent, participants: 150 },
+      });
+      setActionPlan(plan);
+    } else {
+      setActionPlan(null);
+    }
+  }, [matchResult, selectedRole, isOutdoorEvent]);
 
   const activeWarning =
     matchResult?.status === "active" ? matchResult.warning : null;
@@ -203,8 +220,23 @@ export default function DashboardPage() {
           ) : null}
         </div>
 
-        {/* Anchor placeholder for Action Planning (Task 9 & 10) */}
-        <div id="action-plan-section" />
+        {/* Action Plan Section */}
+        <div id="action-plan-section">
+          {actionPlan && matchResult?.status === "active" && (
+            <ActionPlanCard
+              actionPlan={actionPlan}
+              selectedRole={selectedRole}
+              onRoleChange={(newRole) => setSelectedRole(newRole)}
+              isOutdoorEvent={isOutdoorEvent}
+              onOutdoorToggle={(outdoor) => setIsOutdoorEvent(outdoor)}
+              onOpenConfirmation={() => {
+                alert(
+                  "Konfirmasi Dibutuhkan:\nPesan akan dikirim ke Tim Keamanan & Panitia Acara.\n(Fitur ini terhubung penuh pada modal Task 13)"
+                );
+              }}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
