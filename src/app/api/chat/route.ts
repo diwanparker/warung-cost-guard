@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MockAgentProvider } from "@/lib/agent/mock-provider";
-import type { ChatMessage, ChatContext } from "@/lib/agent/types";
-
-const agent = new MockAgentProvider();
+import { defaultAgentProvider } from "@/lib/agent/provider";
+import type { ChatMessage, ChatContext } from "@/types/agent";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, history = [], context } = body as {
+    const { message, history = [], context = {} } = body as {
       message: string;
       history?: ChatMessage[];
-      context: ChatContext;
+      context?: ChatContext;
     };
 
     if (!message || typeof message !== "string") {
@@ -20,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const reply = await agent.sendMessage(message, history, context);
+    const reply = await defaultAgentProvider.sendMessage(message, history, context);
 
     return NextResponse.json({
       success: true,
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
-      { error: "Gagal memproses pesan percakapan" },
+      { error: "Gagal memproses pesan percakapan", details: String(error) },
       { status: 500 }
     );
   }

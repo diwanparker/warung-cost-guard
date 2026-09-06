@@ -1,49 +1,79 @@
 import { describe, it, expect } from "vitest";
-import { createDynamicDemoWarnings } from "@/data/demo/scenarios";
+import { DEMO_SCENARIOS } from "@/data/demo/scenarios";
+import { calculateMargin } from "@/lib/margin/calculator";
+import { suggestPriceAction } from "@/lib/actions/recommender";
+import { DEMO_MARKET_PRICES } from "@/data/demo/market-prices";
 
-describe("Hackathon Demo Scenarios", () => {
-  const scenarios = createDynamicDemoWarnings();
+describe("Evaluation Demo Scenarios", () => {
+  it("Scenario A: Supplier naik -> margin ayam warteg tertekan", () => {
+    const sc = DEMO_SCENARIOS.A;
+    const margin = calculateMargin({
+      purchase_price: sc.purchasePrice,
+      transport_cost: sc.transportCost,
+      waste_pct: sc.wastePct,
+      selling_price: sc.sellingPrice,
+    }, sc.targetMarginPct);
 
-  it("Scenario A returns active warning matching Sukolilo campus", () => {
-    const scA = scenarios.A;
-    const match = scA.getMatchResult(scA.location);
+    expect(margin.gross_margin_pct).toBeLessThan(sc.targetMarginPct);
+    expect(margin.status).toBe("warning");
 
-    expect(match.matched).toBe(true);
-    expect(match.status).toBe("active");
-    expect(match.matchedLocation).toBe("Sukolilo");
-    expect(match.source).toBe("BMKG");
-    expect(match.warning?.event).toContain("Peringatan Dini Cuaca");
-  });
-
-  it("Scenario B returns location mismatch for user in Sukolilo", () => {
-    const scB = scenarios.B;
-    const match = scB.getMatchResult({
-      province: "Jawa Timur",
-      city: "Surabaya",
-      district: "Sukolilo",
+    const action = suggestPriceAction({
+      commodity: sc.commodityId,
+      current_margin_pct: margin.gross_margin_pct,
+      target_margin_pct: sc.targetMarginPct,
+      market_reference: DEMO_MARKET_PRICES[sc.commodityId].median_reference,
+      selling_price: sc.sellingPrice,
+      role: sc.role,
     });
 
-    expect(match.matched).toBe(false);
-    expect(match.status).toBe("no_match");
-    expect(match.reason).toContain("tidak berada di dalam wilayah terdampak");
+    expect(action.action).toBe("OPTIMIZE");
+    expect(action.options.length).toBeLessThanOrEqual(3);
+    expect(action.requires_confirmation).toBe(true);
   });
 
-  it("Scenario C returns expired warning status", () => {
-    const scC = scenarios.C;
-    const match = scC.getMatchResult(scC.location);
+  it("Scenario B: Harga pasar stabil & HET Minyakita", () => {
+    const sc = DEMO_SCENARIOS.B;
+    const margin = calculateMargin({
+      purchase_price: sc.purchasePrice,
+      transport_cost: sc.transportCost,
+      waste_pct: sc.wastePct,
+      selling_price: sc.sellingPrice,
+    }, sc.targetMarginPct);
 
-    expect(match.matched).toBe(true);
-    expect(match.status).toBe("expired");
-    expect(match.warning?.expires.getTime()).toBeLessThan(Date.now());
+    const action = suggestPriceAction({
+      commodity: sc.commodityId,
+      current_margin_pct: margin.gross_margin_pct,
+      target_margin_pct: sc.targetMarginPct,
+      market_reference: DEMO_MARKET_PRICES[sc.commodityId].median_reference,
+      selling_price: sc.sellingPrice,
+      role: sc.role,
+    });
+
+    expect(action.het_warning).toBeDefined();
+    expect(action.action).toBe("REVIEW_COST");
   });
 
-  it("Scenario D returns unavailable without fabricating alerts", () => {
-    const scD = scenarios.D;
-    const match = scD.getMatchResult(scD.location);
+  it("Scenario C: Cabai rawit merah margin kritis & draf negosiasi", () => {
+    const sc = DEMO_SCENARIOS.C;
+    const margin = calculateMargin({
+      purchase_price: sc.purchasePrice,
+      transport_cost: sc.transportCost,
+      waste_pct: sc.wastePct,
+      selling_price: sc.sellingPrice,
+    }, sc.targetMarginPct);
 
-    expect(match.matched).toBe(false);
-    expect(match.status).toBe("unavailable");
-    expect(match.warning).toBeNull();
-    expect(match.reason).toContain("tidak dapat diakses");
+    expect(margin.status).toBe("critical");
+
+    const action = suggestPriceAction({
+      commodity: sc.commodityId,
+      current_margin_pct: margin.gross_margin_pct,
+      target_margin_pct: sc.targetMarginPct,
+      market_reference: DEMO_MARKET_PRICES[sc.commodityId].median_reference,
+      selling_price: sc.sellingPrice,
+      role: sc.role,
+    });
+
+    expect(action.action).toBe("REVIEW_COST");
+    expect(action.suggested_supplier_msg).toBeDefined();
   });
 });

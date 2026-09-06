@@ -51,7 +51,7 @@ export class LangflowClient {
 
       if (!res.ok) {
         return {
-          error: `Langflow server responded with status ${res.status}: ${res.statusText}`,
+          error: `Langflow server status ${res.status}: ${res.statusText}`,
         };
       }
 

@@ -1,123 +1,144 @@
-# Panduan Konfigurasi MCP (Model Context Protocol) untuk IBM Bob
+# Dokumentasi Model Context Protocol (MCP) — Warung Cost Guard
 
-Dokumen ini menjelaskan bagaimana **IBM Bob** terhubung ke workflow **SIAGA** melalui protokol standar **MCP (Model Context Protocol)**.
-
----
-
-## 1. Arsitektur Hubungan Bob & Langflow via MCP
-
-```text
-  ┌──────────────┐             MCP Tool Calls             ┌──────────────┐
-  │   IBM BOB    │ ─────────────────────────────────────> │   LANGFLOW   │
-  │ (Agent User) │ <───────────────────────────────────── │  (Workflow)  │
-  └──────────────┘           Structured JSON              └──────────────┘
-         │                                                       │
-         │ (Tanya Konfirmasi)                                    │ (Retrieve SOP & Data CAP)
-         ▼                                                       ▼
-   [Pengguna Manusia]                                      [BMKG CAP & SOP]
-```
+Sesuai standar integrasi **IBM Bob × Langflow × MCP**, Warung Cost Guard mengekspos 4 perkakas (*tools*) terstruktur dengan validasi ketat skema Zod.
 
 ---
 
-## 2. Definisi 3 Tool Utama MCP
+## Daftar Perkakas MCP
 
-### Tool 1: `get_active_bmkg_warning`
-* **Deskripsi**: Mengambil data peringatan cuaca dini BMKG yang sedang aktif dan mencocokkannya secara geografis dengan kecamatan/kota pengguna.
-* **Input Schema**:
+| Nama Tool | Fungsi Utama | Karakteristik | Gatekeeper |
+| :--- | :--- | :--- | :--- |
+| `get_market_prices` | Mengambil data harga pasar lokal resmi (SP2KP, PIHPS, Bapanas) | Normalisasi komoditas & agregasi median | Otomatis |
+| `calculate_margin` | Menghitung biaya efektif (yield-adjusted), laba kotor, dan margin riil | Deterministik (non-LLM) | Otomatis |
+| `suggest_price_action` | Menganalisis kondisi margin, batas HET, dan rekomendasi aksi | Rule engine + RAG SOP penetapan harga | Otomatis |
+| `notify_supplier` | Mengirimkan pesan negosiasi WhatsApp / draf kulakan ke supplier | Aksi eksternal | **Wajib Konfirmasi Manusia (HITL)** |
+
+---
+
+## 1. `get_market_prices`
+Mengambil data harga pangan komparatif untuk suatu wilayah pasar rakyat.
+
+### Skema Input:
 ```json
 {
-  "province": "Jawa Timur",
+  "commodity": "cabai_rawit_merah",
   "city": "Surabaya",
-  "district": "Sukolilo"
-}
-```
-* **Output Schema**:
-```json
-{
-  "matched": true,
-  "source": "BMKG",
-  "event": "Peringatan Dini Cuaca Ekstrem",
-  "headline": "Peringatan Dini Cuaca Jawa Timur...",
-  "description": "Berpotensi hujan lebat disertai kilat/petir...",
-  "effective": "2026-09-05T06:05:00.000Z",
-  "expires": "2026-09-05T09:00:00.000Z",
-  "area": "Kota Surabaya (Kec. Sukolilo, Kec. Rungkut)",
-  "matched_location": "Sukolilo",
-  "confidence": "exact",
-  "reason": "Kecamatan Sukolilo tercantum secara spesifik...",
-  "status": "active"
+  "date": "2026-09-06"
 }
 ```
 
----
-
-### Tool 2: `build_role_action_plan`
-* **Deskripsi**: Menerjemahkan data peringatan aktif menjadi checklist tindakan operasional yang spesifik terhadap peran pengguna berdasarkan basis data SOP mitigasi bencana.
-* **Input Schema**:
+### Skema Output:
 ```json
 {
-  "warning": { "...objek warning dari tool 1..." },
-  "role": "campus_operations",
-  "context": {
-    "outdoor_event": true,
-    "participants": 150
-  }
-}
-```
-* **Output Schema**:
-```json
-{
-  "summary": "Rencana tindakan kesiapsiagaan darurat untuk peran Operasional Kampus...",
-  "risk_context": "Peringatan BMKG aktif di Sukolilo berisiko...",
-  "priority_actions": [ ... ],
-  "recommended_actions": [ ... ],
-  "monitoring": [ ... ],
-  "do_not_do": [ ... ],
-  "source_warning": "BMKG",
-  "sop_sources": [ "SOP Kesiapsiagaan Cuaca Ekstrem (v1.2)" ],
-  "requires_confirmation": true
+  "commodity": "cabai_rawit_merah",
+  "commodity_name": "Cabai Rawit Merah",
+  "city": "Surabaya",
+  "prices": [
+    { "source": "PIHPS", "value": 62000, "marketName": "Pasar Keputran" },
+    { "source": "Bapanas", "value": 61500, "marketName": "Pasar Wonokromo" },
+    { "source": "SP2KP", "value": 63000, "marketName": "Pasar Pabean" }
+  ],
+  "median_reference": 62000,
+  "min_price": 61500,
+  "max_price": 63000,
+  "unit": "kg",
+  "source_time": "2026-09-06",
+  "is_demo": true
 }
 ```
 
 ---
 
-### Tool 3: `notify_confirmed_team`
-* **Deskripsi**: Menjalankan aksi eksternal (pengiriman email broadcast / dispatch notifikasi ke tim lapangan).
-* **Aturan Mutlak (Responsible AI)**: Aksi **DITOLAK** jika parameter `confirmed` bernilai `false`.
-* **Input Schema**:
+## 2. `calculate_margin`
+Melakukan kalkulasi biaya efektif secara reproducible tanpa halusinasi matematis LLM.
+
+### Formula:
+$$\text{Biaya Efektif} = \frac{\text{Modal Kulakan} + \text{Ongkir}}{1 - (\text{Susut \%} / 100)}$$
+$$\text{Gross Margin \%} = \frac{\text{Harga Jual} - \text{Biaya Efektif}}{\text{Harga Jual}} \times 100\%$$
+
+### Skema Input:
 ```json
 {
+  "purchase_price": 36500,
+  "transport_cost": 1500,
+  "waste_pct": 5,
+  "selling_price": 45000
+}
+```
+
+### Skema Output:
+```json
+{
+  "purchase_price": 36500,
+  "transport_cost": 1500,
+  "waste_pct": 5,
+  "selling_price": 45000,
+  "effective_cost": 40000,
+  "gross_profit": 5000,
+  "gross_margin_pct": 11.11,
+  "markup_pct": 12.5,
+  "status": "warning"
+}
+```
+
+---
+
+## 3. `suggest_price_action`
+Menyusun rekomendasi rasional berbasis SOP penetapan harga, batas HET pemerintah, dan posisi terhadap harga pasar lokal.
+
+### Skema Input:
+```json
+{
+  "commodity": "ayam_ras",
+  "current_margin_pct": 11.11,
+  "target_margin_pct": 18,
+  "market_reference": 43000,
+  "selling_price": 45000,
+  "role": "warteg"
+}
+```
+
+### Skema Output:
+```json
+{
+  "action": "OPTIMIZE",
+  "headline": "Margin Tertekan — Prioritaskan Negosiasi Supplier & Pengendalian Susut",
+  "options": [
+    "Minta potongan harga supplier atau cari supplier alternatif di pasar induk",
+    "Tahan harga jual saat ini untuk menjaga daya saing terhadap warung sekitar",
+    "Tinjau ulang biaya transportasi kulakan"
+  ],
+  "confidence": "medium",
+  "requires_confirmation": true,
+  "reasoning": "Margin (11.1%) masih di bawah target (18%), namun harga jual Anda sudah sebanding atau di atas median pasar (Rp43.000). Menaikkan harga jual berisiko kehilangan pelanggan.",
+  "suggested_supplier_msg": "Halo Pak Slamet (CV Barokah), terkait kenaikan harga ayam jadi Rp36.500/kg, apakah ada potongan harga volume jika kami ambil rutin 25 kg/hari?"
+}
+```
+
+---
+
+## 4. `notify_supplier`
+Menjalankan pengiriman pesan negosiasi WhatsApp / draf kulakan ke kontak supplier terpilih.
+
+> [!CAUTION]
+> **Responsible AI Hard-Gate:** Tool ini akan otomatis **GAGAL** bila parameter `confirmed` bernilai `false`. Aksi eksternal tidak boleh dieksekusi tanpa persetujuan eksplisit pedagang manusia.
+
+### Skema Input:
+```json
+{
+  "supplier_id": "SUP-01",
+  "message": "Halo Pak Slamet, mohon konfirmasi harga ayam 25 kg untuk besok.",
   "confirmed": true,
-  "recipients": ["security@pens.ac.id", "sarpras@pens.ac.id"],
-  "message": "Peringatan dini cuaca BMKG aktif hingga pukul 16:00 WIB. Harap sterilkan area terbuka.",
-  "channel": "email"
+  "channel": "whatsapp"
 }
 ```
 
----
-
-## 3. Konfigurasi MCP Server di IBM Bob (Slide 58-59)
-
-Di antarmuka **IBM Bob**:
-1. Buka menu **Settings (Icon Gear) > MCP**.
-2. Klik tombol **"+"** untuk menambah MCP server baru.
-3. Masukkan konfigurasi JSON berikut:
-
+### Skema Output:
 ```json
 {
-  "mcpServers": {
-    "siaga-bmkg-copilot": {
-      "command": "node",
-      "args": [
-        "--with",
-        "mcp<2.0.0",
-        "./scripts/mcp-server.js"
-      ],
-      "env": {
-        "BMKG_CAP_FEED_URL": "https://signature.bmkg.go.id/alert",
-        "DEMO_MODE": "true"
-      }
-    }
-  }
+  "sent": true,
+  "channel": "whatsapp",
+  "timestamp": "2026-09-06T16:00:00.000Z",
+  "message": "Pesan negosiasi berhasil dikirimkan ke Pak Slamet (0812-3456-7890) via WHATSAPP."
 }
 ```

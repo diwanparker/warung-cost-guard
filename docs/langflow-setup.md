@@ -1,67 +1,64 @@
-# Panduan Arsitektur & Setup Langflow untuk SIAGA
+# Panduan Konfigurasi Langflow — Warung Cost Guard
 
-Sistem **SIAGA** membagi proses eksekusi menjadi 3 alur kerja modular (*flows*) di **Langflow**.
+Warung Cost Guard mengadopsi arsitektur resmi hackathon:
+**Pengguna / Web UI $\rightarrow$ IBM Bob Copilot $\rightarrow$ Model Context Protocol (MCP) $\rightarrow$ Langflow Workflows**.
 
 ---
 
-## 1. Pembagian Alur Kerja (Workflows)
+## 1. Konfigurasi Endpoint Model Provider (9router)
+Model language inference di Langflow dikonfigurasikan menggunakan endpoint OpenAI-Compatible gratis:
+* **Base URL**: `https://9router.diwanparker.tech/v1`
+* **Model Name**: `"Free"`
+* **API Key**: `${OPENAI_API_KEY}` (atau `sk-a59a43ae56dc9a3f-u8fnth-d1f43a5d`)
+* **Temperature**: `0.3` (Konsisten & minim halusinasi)
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ FLOW A: Warning Retrieval Flow                             │
-│ Input Lokasi ─> Fetch BMKG CAP ─> Parse XML ─> Location &   │
-│                 Temporal Filter ─> Output Structured Warning │
-└─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│ FLOW B: Action Planner Flow                                 │
-│ Warning Object + Role Context ─> Vector/SOP Retrieval ─>     │
-│                 Safety Validation ─> Output Action Plan     │
-└─────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│ FLOW C: Confirmed Action Dispatcher                         │
-│ Action Plan + Confirmed Boolean ─> Gatekeeper Check ─>      │
-│                 Composio / Gmail / Task Notification        │
-└─────────────────────────────────────────────────────────────┘
+---
+
+## 2. Struktur Flow Langflow
+
+```mermaid
+flowchart TD
+    A[Chat Input / MCP Trigger] --> B[Custom Python Component: Normalizer & Fetcher]
+    B --> C[Deterministic Margin Calculator]
+    C --> D[Knowledge Base / RAG SOP Penetapan Harga]
+    D --> E[Prompt Template]
+    E --> F[OpenAIModel: 9router 'Free']
+    F --> G[Structured JSON / Safety Validator]
+    G --> H[Chat Output / MCP Response]
 ```
 
 ---
 
-## 2. Rincian Komponen Node Langflow
+## 3. Template Prompt Sistem di Langflow
 
-### FLOW A — Warning Retrieval
-* **Chat Input**: Menerima parameter lokasi pengguna (`province`, `city`, `district`).
-* **Custom Python / API Request Component**: Mengirim HTTP GET ke endpoint CAP BMKG (`/alerts/nowcast/id`).
-* **XML Parser Component**: Mengurai tag XML `<alert>`, `<info>`, `<area>`, `<effective>`, `<expires>`.
-* **Python Filter Function**: Memeriksa `now >= effective && now <= expires` dan kecocokan string wilayah.
-* **Chat Output**: Mengirimkan objek JSON terstruktur status peringatan.
+```text
+Anda adalah Warung Cost Guard, Copilot Harga Pangan & Margin untuk pedagang kecil Indonesia.
 
-### FLOW B — Action Planner
-* **Input Node**: Menerima objek hasil dari Flow A dan peran pengguna (`role`).
-* **Astra DB / In-Memory Vector Store**: Menyimpan embedding dokumen SOP penanggulangan bencana kampus (Hujan Lebat, Kilat, Angin Kencang, Outdoor Event).
-* **LLM Model (Google Gemini / IBM Granite)**: Mengintegrasikan klausul SOP ke dalam format checklist 3 prioritas:
-  * Prioritas Utama (Tindakan Segera)
-  * Tindakan Pendukung Fasilitas
-  * Pengawasan Berkala (Monitoring)
-* **Safety Guardrail Node**: Memverifikasi bahwa rekomendasi tidak mengarang data cuaca dan menyematkan `requiresConfirmation: true`.
+ATURAN UTAMA:
+1. Gunakan HANYA angka harga, biaya, dan margin yang diberikan oleh tool.
+2. JANGAN menciptakan harga pasar sendiri.
+3. JANGAN menghitung ulang angka finansial dengan perkiraan (LLM jangan berhitung manual).
+4. JANGAN memerintahkan user menetapkan harga tertentu tanpa menjelaskan dasar.
+5. Pisahkan secara tegas:
+   - 1. Fakta data pasar
+   - 2. Hasil perhitungan margin riil
+   - 3. Rekomendasi tindakan (Maksimal 3 opsi rasional)
 
-### FLOW C — Confirmed Action
-* **Input Node**: Menerima payload konfirmasi (`confirmed: boolean`, `recipients: list`, `message: string`).
-* **Conditional Router Node**:
-  * Jika `confirmed == false` $\rightarrow$ Hentikan alur seketika, kembalikan status *Cancelled*.
-  * Jika `confirmed == true` $\rightarrow$ Lanjutkan ke external action tools.
-* **External Action Tools (Composio)**:
-  * **Gmail / Webhook Tool**: Mengirimkan email broadcast darurat.
-  * **Google Calendar Tool**: Membuat blok acara pemantauan cuaca darurat.
+SOP Penetapan Harga:
+{sop_context}
+
+Data Pasar Lokal:
+{market_data}
+
+Perhitungan Biaya & Margin:
+{margin_data}
+
+Konteks Profil Usaha:
+{business_role}
+```
 
 ---
 
-## 3. Ekspor & Integrasi ke Bob via MCP
-Di aplikasi Langflow:
-1. Buka flow yang telah dibuat.
-2. Klik tombol **MCP Server** di pojok kanan atas.
-3. Klik **Generate API Key**.
-4. Salin endpoint JSON MCP untuk ditempelkan ke konfigurasi MCP IBM Bob.
+## 4. Ekspor Starter Project Langflow
+File starter flow siap impor tersedia pada:
+`langflow/WarungCostGuard_Starter.json`

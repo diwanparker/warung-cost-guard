@@ -1,73 +1,45 @@
-export type UserRole =
-  | "campus_operations"
-  | "campus_security"
-  | "event_organizer"
-  | "school_operations"
-  | "factory_operations"
-  | "warehouse_operations"
-  | "logistics"
-  | "community_leader";
+export type BusinessRole =
+  | "warung_kelontong"
+  | "warteg"
+  | "pedagang_pasar"
+  | "umkm_kuliner";
 
-export interface UserRoleInfo {
-  id: UserRole;
+export interface BusinessRoleInfo {
+  id: BusinessRole;
   label: string;
   description: string;
-  category: "campus" | "school" | "industry" | "community";
+  defaultTargetMarginPct: number;
 }
 
-export const USER_ROLES: UserRoleInfo[] = [
+export const BUSINESS_ROLES: BusinessRoleInfo[] = [
   {
-    id: "campus_operations",
-    label: "Operasional Kampus",
-    description: "Pengelola fasilitas, gedung, dan kegiatan umum kampus",
-    category: "campus",
+    id: "warteg",
+    label: "Warteg / Kedai Makan",
+    description: "Mengolah bahan baku mentah menjadi menu makanan siap saji",
+    defaultTargetMarginPct: 20,
   },
   {
-    id: "campus_security",
-    label: "Keamanan / Security Kampus",
-    description: "Petugas pengamanan gerbang, patroli, dan evakuasi darurat",
-    category: "campus",
+    id: "warung_kelontong",
+    label: "Warung Kelontong",
+    description: "Menjual sembako dan barang kebutuhan pokok eceran",
+    defaultTargetMarginPct: 12,
   },
   {
-    id: "event_organizer",
-    label: "Panitia / Penyelenggara Acara",
-    description: "Koordinator kegiatan outdoor, panggung, dan keramaian massa",
-    category: "campus",
+    id: "pedagang_pasar",
+    label: "Pedagang Pasar Tradisional",
+    description: "Membeli grosir / partai besar dan menjual eceran di pasar",
+    defaultTargetMarginPct: 15,
   },
   {
-    id: "school_operations",
-    label: "Operasional Sekolah",
-    description: "Guru dan staf piket pengawas kepulangan/aktivitas siswa",
-    category: "school",
-  },
-  {
-    id: "factory_operations",
-    label: "Operasional Pabrik",
-    description: "Pengawas keselamatan kerja lapangan dan area produksi terbuka",
-    category: "industry",
-  },
-  {
-    id: "warehouse_operations",
-    label: "Operasional Gudang",
-    description: "Penanggung jawab muatan, bongkar muat, dan kebocoran atap",
-    category: "industry",
-  },
-  {
-    id: "logistics",
-    label: "Logistik & Pengiriman",
-    description: "Armada pengantaran dan kurir rute jalan raya",
-    category: "industry",
-  },
-  {
-    id: "community_leader",
-    label: "Pengurus Lingkungan (RT/RW)",
-    description: "Penyambung informasi kesiapsiagaan warga lokal",
-    category: "community",
+    id: "umkm_kuliner",
+    label: "UMKM Makanan Olahan",
+    description: "Produksi makanan ringan, katering, dan olahan komoditas",
+    defaultTargetMarginPct: 25,
   },
 ];
 
 export interface UserLocation {
   province: string;
   city: string;
-  district: string;
+  market?: string;
 }

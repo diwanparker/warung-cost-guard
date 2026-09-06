@@ -1,27 +1,31 @@
 import type { NotificationProvider } from "./provider";
-import type { NotificationRequest, NotificationResult } from "@/types/action";
+import type { SupplierNotificationRequest, SupplierNotificationResult } from "@/types/supplier";
+import { getSupplierById } from "@/data/demo/suppliers";
 
 export class MockNotificationProvider implements NotificationProvider {
-  async send(request: NotificationRequest): Promise<NotificationResult> {
-    const timestamp = new Date().toISOString();
-
-    // STRICT RESPONSIBLE AI RULE: No external action without explicit human confirmation
+  async send(request: SupplierNotificationRequest): Promise<SupplierNotificationResult> {
+    // RESPONSIBLE AI HARD GATE:
     if (!request.confirmed) {
       return {
-        success: false,
-        channel: request.channel,
-        recipientCount: 0,
-        timestamp,
-        message: "Dibatalkan: Konfirmasi otorisasi manusia tidak diberikan. Tidak ada tindakan eksternal yang dilakukan.",
+        sent: false,
+        channel: request.channel || "mock",
+        timestamp: new Date().toISOString(),
+        message: "Pengiriman dibatalkan: Konfirmasi otorisasi pengguna manusia tidak diberikan.",
+        error: "HUMAN_CONFIRMATION_REQUIRED",
       };
     }
 
+    const supplier = getSupplierById(request.supplier_id);
+    const channel = request.channel || "whatsapp";
+    const recipient = supplier ? `${supplier.contactPerson} (${supplier.phone})` : request.supplier_id;
+
+    console.log(`[NOTIF-DISPATCH] Sent via ${channel} to ${recipient}: "${request.message}"`);
+
     return {
-      success: true,
-      channel: request.channel,
-      recipientCount: request.recipients.length,
-      timestamp,
-      message: `Pemberitahuan darurat berhasil dikirimkan kepada ${request.recipients.length} penerima melalui kanal ${request.channel}.`,
+      sent: true,
+      channel,
+      timestamp: new Date().toISOString(),
+      message: `Pesan negosiasi berhasil dikirimkan ke ${recipient} via ${channel.toUpperCase()}.`,
     };
   }
 }

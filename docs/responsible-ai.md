@@ -1,54 +1,42 @@
-# Prinsip & Implementasi Responsible AI pada SIAGA
+# Prinsip Responsible AI & Kepatuhan Regulasi — Warung Cost Guard
 
-Proyek **SIAGA** menerapkan prinsip **Responsible AI** sebagai fitur inti kode, bukan sekadar pelengkap dokumen. Sistem penanggulangan bencana hidrometeorologi menyangkut keselamatan jiwa dan aset institusi, sehingga setiap keputusan AI harus dapat dipertanggungjawabkan (*accountable*), transparan, dan aman.
+Warung Cost Guard dirancang dengan komitmen etika kecerdasan buatan dan kepatuhan hukum perdagangan Republik Indonesia:
 
 ---
 
-## 1. Sepuluh Aturan Emas Responsible AI SIAGA
+## 1. Kepatuhan UU No. 5/1999 (Anti-Monopoli & Persaingan Usaha Tidak Sehat)
+* **Konteks:** Pasal 5 UU No. 5/1999 melarang pelaku usaha membuat perjanjian penetapan harga (*price-fixing*) dengan pesaingnya.
+* **Implementasi Sistem:** 
+  - Warung Cost Guard **TIDAK PERNAH** membagikan strategi harga suatu pedagang ke pedagang lain.
+  - Data yang digunakan sebagai acuan adalah data **pasar rakyat terbuka** (SP2KP Kemendag, PIHPS Bank Indonesia, Bapanas) yang dipublikasikan secara resmi untuk publik, bukan data rahasia usaha lain.
+  - Rekomendasi bersifat **individual & internal** untuk menjaga kelangsungan usaha mikro pedagang secara mandiri.
 
-### Aturan 1: Pantangan Halusinasi Prakiraan Cuaca (*Zero Weather Fabrication*)
-* **Masalah**: Model bahasa (LLM) cenderung percaya diri mengarang suhu, kecepatan angin, atau waktu hujan jika ditanya.
-* **Implementasi Kode**: Logika cuaca diisolasi di `src/lib/bmkg/client.ts`. Jika respons API BMKG kosong atau terjadi gangguan jaringan, sistem mengembalikan status `unavailable` dan menolak memproduksi peringatan cuaca tiruan.
+---
 
-### Aturan 2: Integritas & Keaslian Data BMKG (*Source Fidelity*)
-* **Masalah**: AI sering meringkas informasi dengan mengubah terminologi keparahan (*severity*).
-* **Implementasi Kode**: Nilai keparahan (*Severity: Severe/Moderate*) dan deskripsi narasi asli BMKG dipertahankan apa adanya. Pengguna dapat membuka dialog **"Lihat Rincian Asli BMKG"** untuk melihat teks dokumen resmi tanpa modifikasi AI.
+## 2. Kepatuhan Batas Regulasi HET / HAP
+* **Konteks:** Beberapa komoditas strategis memiliki Harga Eceran Tertinggi (HET) yang ditetapkan pemerintah:
+  - **Minyakita:** HET Rp15.700/liter (Permendag No. 18/2024).
+  - **Beras Medium SPHP:** HET Rp12.500/kg.
+* **Implementasi Sistem:**
+  - Mesin penentu tindakan secara otomatis mendeteksi jika pedagang hendak menaikkan harga di atas HET resmi.
+  - Sistem menampilkan **Peringatan Regulasi** dan melarang sistem menyarankan kenaikan harga di atas batas hukum. Solusi diarahkan ke efisiensi modal beli dan negosiasi distributor.
 
-### Aturan 3: Visibilitas Sumber dan Batas Waktu (*Mandatory Attribution & Timestamps*)
-* Setiap tampilan kartu peringatan wajib menyematkan:
-  * Lencana **Sumber: BMKG**
-  * Waktu penerbitan (*sent*)
-  * Periode berlaku (*effective* hingga *expires* dalam format WIB resmi UTC+7)
-  * Hitung mundur sisa waktu berlaku
+---
 
-### Aturan 4: Larangan Menyatakan "100% Aman" (*No False Safety Declarations*)
-* **Bahaya**: Menyatakan *"Cuaca hari ini aman"* dapat membuat operator teledor saat terjadi fenomena cuaca mendadak di luar radar.
-* **Implementasi Kode**: Fungsi `validateActionPlanSafety()` di `src/lib/actions/safety.ts` memindai rencana tindakan dan menolak klaim absolut *"pasti aman"*. Sebagai gantinya, sistem menyatakan secara objektif:  
-  > *"Tidak ditemukan peringatan aktif yang cocok pada data resmi BMKG yang berhasil diperiksa saat ini."*
+## 3. Nol Halusinasi Finansial (Deterministic Financial Logic)
+* Perhitungan laba kotor, biaya efektif perolehan (yield-adjusted), markup, dan margin persentase **tidak dilakukan oleh model bahasa (LLM)**.
+* Seluruh operasi aritmatika dieksekusi oleh kalkulator TypeScript murni yang teruji dan reproducible 100%.
 
-### Aturan 5: Gerbang Otorisasi Konfirmasi Manusia (*Human-in-the-Loop Gate*)
-* **Bahaya**: Mengirim email darurat atau sirene secara otomatis tanpa validasi manusia dapat memicu kepanikan massal (*false alarm*).
-* **Implementasi Kode**: Endpoint `/api/notify` dan tool MCP `notify_confirmed_team` memiliki pemeriksaan ketat:
-  ```ts
-  if (!request.confirmed) {
-    return { success: false, message: "Dibatalkan: Konfirmasi otorisasi manusia tidak diberikan." };
-  }
-  ```
-  Aksi notifikasi eksternal mustahil terjadi tanpa penekanan tombol konfirmasi oleh manusia pada modal dialog.
+---
 
-### Aturan 6: Penandaan Jelas Data Demo (*Transparent Synthetic Data Labeling*)
-* Ketika dijalankan dalam mode simulasi, seluruh data sintetis secara terang benderang dilabeli dengan lencana berwarna ungu: **MODE DEMO: DATA SIMULASI**. Sistem tidak pernah memalsukan data simulasi seolah-olah peringatan nyata.
+## 4. Otorisasi Manusia Wajib (Human-in-the-Loop)
+* Setiap tindakan eksternal (pengiriman notifikasi negosiasi ke nomor WhatsApp/kontak supplier) **wajib melalui modal konfirmasi**.
+* Pada protokol MCP `notify_supplier`, jika parameter `confirmed` bernilai `false`, sistem langsung menolak eksekusi dan mencatat pelanggaran otorisasi.
 
-### Aturan 7: Pemisahan Jelas antara Peringatan Resmi vs Rekomendasi Tindakan
-* Antarmuka membedakan dengan tegas:
-  * **Peringatan Resmi (BMKG)**: Fakta kejadian cuaca.
-  * **Rekomendasi Tindakan (SIAGA SOP)**: Saran langkah penanganan berdasarkan dokumen K3L institusi.
+---
 
-### Aturan 8: Penjelasan Transparansi (*Explainability: "Mengapa Relevan?"*)
-* Sistem tidak menyembunyikan alasan pemilihan warning. Pada setiap kartu ditampilkan kotak penjelasan transparan mengenai alasan kecocokan administratif wilayah kecamatan dan kota.
-
-### Aturan 9: Pengumpulan Data Pribadi Minimal (*Data Minimization*)
-* SIAGA tidak memerlukan registrasi data pribadi sensitif pengguna. Sistem hanya memproses koordinat administratif lokasi fasilitas yang sedang dipantau.
-
-### Aturan 10: Keamanan Kunci Rahasia (*No Client-Side Secrets*)
-* Kunci API (Langflow, Composio, dll.) hanya dikelola di sisi server menggunakan enkapsulasi `.env.local` dan dilarang keras diekspos ke bundel JavaScript peramban (*client-side*).
+## 5. Transparansi & Pemisahan Informasi
+Antarmuka dialog Bob Copilot dan kartu analisis selalu memisahkan secara tegas:
+1. **Fakta Data Pasar** (dengan atribusi sumber: SP2KP / PIHPS / Bapanas / BPS).
+2. **Hasil Perhitungan Riil** (biaya efektif dan persentase margin).
+3. **Rekomendasi Tindakan AI** (maksimal 3 opsi dengan tingkat keyakinan yang transparan).

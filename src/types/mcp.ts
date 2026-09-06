@@ -1,45 +1,50 @@
-import type { UserRole } from "./user";
-import type { WarningMatchResult } from "./bmkg";
-import type { ActionPlan, NotificationRequest, NotificationResult } from "./action";
-
-export interface McpToolGetWarningInput {
-  province: string;
-  city: string;
-  district: string;
-}
-
-export interface McpToolGetWarningOutput {
-  matched: boolean;
-  source: "BMKG";
-  event: string | null;
-  headline: string | null;
-  description: string | null;
-  effective: string | null;
-  expires: string | null;
-  area: string | null;
-  matched_location: string | null;
-  confidence: string;
-  reason: string;
-  status: string;
-}
-
-export interface McpToolBuildActionPlanInput {
-  warning: WarningMatchResult;
-  role: UserRole;
-  context?: {
-    outdoor_event?: boolean;
-    participants?: number;
-    notes?: string;
-  };
-}
-
-export type McpToolBuildActionPlanOutput = ActionPlan;
-
-export type McpToolNotifyInput = NotificationRequest;
-
-export type McpToolNotifyOutput = NotificationResult;
+import type { MarketPriceResult } from "./market";
+import type { MarginResult } from "./margin";
+import type { PriceActionOutput } from "./action";
+import type { SupplierNotificationResult } from "./supplier";
+import type { BusinessRole } from "./user";
 
 export type McpToolName =
-  | "get_active_bmkg_warning"
-  | "build_role_action_plan"
-  | "notify_confirmed_team";
+  | "get_market_prices"
+  | "calculate_margin"
+  | "suggest_price_action"
+  | "notify_supplier";
+
+export interface McpGetMarketPricesInput {
+  commodity: string;
+  city?: string;
+  date?: string;
+}
+
+export type McpGetMarketPricesOutput = MarketPriceResult;
+
+export interface McpCalculateMarginInput {
+  purchase_price: number;
+  transport_cost?: number;
+  waste_pct?: number;
+  selling_price: number;
+}
+
+export type McpCalculateMarginOutput = MarginResult;
+
+export interface McpSuggestPriceActionInput {
+  commodity: string;
+  current_margin_pct: number;
+  target_margin_pct?: number;
+  market_reference: number;
+  selling_price: number;
+  effective_cost?: number;
+  role?: BusinessRole;
+}
+
+export type McpSuggestPriceActionOutput = PriceActionOutput;
+
+export interface McpNotifySupplierInput {
+  supplier_id: string;
+  message: string;
+  confirmed: boolean;
+  commodity?: string;
+  channel?: "whatsapp" | "email" | "mock";
+}
+
+export type McpNotifySupplierOutput = SupplierNotificationResult;

@@ -3,319 +3,327 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { QuickStatus } from "@/components/dashboard/QuickStatus";
-import { EarthquakeTicker } from "@/components/dashboard/EarthquakeTicker";
-import { WeatherForecastCard } from "@/components/dashboard/WeatherForecastCard";
-import { LocationSelector } from "@/components/alerts/LocationSelector";
-import { WarningStatusCard } from "@/components/alerts/WarningStatusCard";
-import { EmptyWarningState } from "@/components/alerts/EmptyWarningState";
-import { ExpiredWarningState } from "@/components/alerts/ExpiredWarningState";
-import { WarningUnavailableState } from "@/components/alerts/WarningUnavailableState";
-import { ActionPlanCard } from "@/components/actions/ActionPlanCard";
-import { ConfirmationDialog } from "@/components/actions/ConfirmationDialog";
+import { RoleSelector } from "@/components/dashboard/RoleSelector";
+import { InflationTicker } from "@/components/dashboard/InflationTicker";
+import { CommodityGrid } from "@/components/dashboard/CommodityGrid";
+import { MarginCalculator } from "@/components/margin/MarginCalculator";
+import { ActionRecommendationCard } from "@/components/actions/ActionRecommendationCard";
+import { SupplierNegotiateModal } from "@/components/actions/SupplierNegotiateModal";
 import { CopilotPanel } from "@/components/chat/CopilotPanel";
-import { buildRoleActionPlan } from "@/lib/actions/planner";
-import { getTimeRemaining, formatWibTime } from "@/lib/bmkg/temporal";
-import type { UserLocation, UserRole } from "@/types/user";
-import type { WarningMatchResult } from "@/types/bmkg";
+import { MASTER_COMMODITIES, getCommodityById } from "@/data/commodities";
+import { DEMO_SCENARIOS, type DemoScenario } from "@/data/demo/scenarios";
+import { DEMO_MARKET_PRICES } from "@/data/demo/market-prices";
+import { getSupplierById, getSuppliersForCommodity } from "@/data/demo/suppliers";
+import { calculateMargin } from "@/lib/margin/calculator";
+import { suggestPriceAction } from "@/lib/actions/recommender";
+import type { BusinessRole } from "@/types/user";
+import type { MarginInput, MarginResult } from "@/types/margin";
+import type { MarketPriceResult } from "@/types/market";
 import { FlaskConical, CheckCircle2 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [location, setLocation] = useState<UserLocation>({
-    province: "Jawa Timur",
-    city: "Surabaya",
-    district: "Sukolilo",
+  const [selectedRole, setSelectedRole] = useState<BusinessRole>("warteg");
+  const [activeCommodityId, setActiveCommodityId] = useState<string>("ayam_ras");
+  const [scenario, setScenario] = useState<"A" | "B" | "C" | "CUSTOM">("A");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isNegotiateModalOpen, setIsNegotiateModalOpen] = useState(false);
+  const [notificationSent, setNotificationSent] = useState<string | null>(null);
+
+  // Active commodity inputs state
+  const activeCommodity = useMemo(
+    () => getCommodityById(activeCommodityId) || MASTER_COMMODITIES[0],
+    [activeCommodityId]
+  );
+
+  const [marginInputs, setMarginInputs] = useState<Record<string, MarginInput>>(() => {
+    const initial: Record<string, MarginInput> = {};
+    for (const c of MASTER_COMMODITIES) {
+      initial[c.id] = {
+        purchase_price: c.defaultPurchasePrice,
+        transport_cost: c.defaultTransportCost,
+        waste_pct: c.defaultWastePct,
+        selling_price: c.defaultSellingPrice,
+      };
+    }
+    return initial;
   });
 
-  const [scenario, setScenario] = useState<"A" | "B" | "C" | "D" | "LIVE">("A");
-  const [matchResult, setMatchResult] = useState<WarningMatchResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(true);
-  const [scenarioName, setScenarioName] = useState<string | undefined>();
-  const [selectedRole, setSelectedRole] = useState<UserRole>("campus_operations");
-  const [isOutdoorEvent, setIsOutdoorEvent] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [notificationSent, setNotificationSent] = useState(false);
-  const [notificationLogId, setNotificationLogId] = useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // Apply scenario when clicked
+  const handleSelectScenario = (scId: "A" | "B" | "C" | "CUSTOM") => {
+    setScenario(scId);
+    if (scId !== "CUSTOM") {
+      const sc = DEMO_SCENARIOS[scId];
+      setSelectedRole(sc.role);
+      setActiveCommodityId(sc.commodityId);
+      setMarginInputs((prev) => ({
+        ...prev,
+        [sc.commodityId]: {
+          purchase_price: sc.purchasePrice,
+          transport_cost: sc.transportCost,
+          waste_pct: sc.wastePct,
+          selling_price: sc.sellingPrice,
+        },
+      }));
+    }
+  };
 
-  const handleConfirmNotification = async (recipients: string[], message: string) => {
+  const currentInput: MarginInput = marginInputs[activeCommodityId] || {
+    purchase_price: activeCommodity.defaultPurchasePrice,
+    transport_cost: activeCommodity.defaultTransportCost,
+    waste_pct: activeCommodity.defaultWastePct,
+    selling_price: activeCommodity.defaultSellingPrice,
+  };
+
+  const handleInputChange = (newInput: MarginInput) => {
+    setMarginInputs((prev) => ({
+      ...prev,
+      [activeCommodityId]: newInput,
+    }));
+  };
+
+  const handleResetInput = () => {
+    setMarginInputs((prev) => ({
+      ...prev,
+      [activeCommodityId]: {
+        purchase_price: activeCommodity.defaultPurchasePrice,
+        transport_cost: activeCommodity.defaultTransportCost,
+        waste_pct: activeCommodity.defaultWastePct,
+        selling_price: activeCommodity.defaultSellingPrice,
+      },
+    }));
+  };
+
+  // Deterministic margin results map for all commodities
+  const allMargins = useMemo(() => {
+    const res: Record<string, MarginResult> = {};
+    for (const c of MASTER_COMMODITIES) {
+      const input = marginInputs[c.id] || {
+        purchase_price: c.defaultPurchasePrice,
+        transport_cost: c.defaultTransportCost,
+        waste_pct: c.defaultWastePct,
+        selling_price: c.defaultSellingPrice,
+      };
+      res[c.id] = calculateMargin(input, c.targetMarginPct);
+    }
+    return res;
+  }, [marginInputs]);
+
+  const activeMarginResult = allMargins[activeCommodityId] || calculateMargin(currentInput);
+
+  // Market prices map
+  const marketPrices: Record<string, MarketPriceResult> = DEMO_MARKET_PRICES;
+  const activeMarketPrice = marketPrices[activeCommodityId] || marketPrices["ayam_ras"];
+
+  // Action recommendation
+  const actionResult = useMemo(() => {
+    return suggestPriceAction({
+      commodity: activeCommodityId,
+      current_margin_pct: activeMarginResult.gross_margin_pct,
+      target_margin_pct: activeCommodity.targetMarginPct,
+      market_reference: activeMarketPrice.median_reference,
+      selling_price: activeMarginResult.selling_price,
+      effective_cost: activeMarginResult.effective_cost,
+      role: selectedRole,
+    });
+  }, [activeCommodityId, activeMarginResult, activeCommodity, activeMarketPrice, selectedRole]);
+
+  // Quick metrics calculations
+  const totalCommodities = MASTER_COMMODITIES.length;
+  const alertCount = Object.values(allMargins).filter(
+    (m) => m.status === "warning" || m.status === "critical"
+  ).length;
+  const avgMarginPct =
+    Object.values(allMargins).reduce((acc, m) => acc + m.gross_margin_pct, 0) /
+    totalCommodities;
+
+  // Supplier info for active commodity
+  const suppliers = getSuppliersForCommodity(activeCommodityId);
+  const activeSupplier = suppliers[0];
+
+  const handleConfirmSupplierNegotiation = async (supplierId: string, message: string) => {
     const res = await fetch("/api/notify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        confirmed: true,
-        recipients,
+        supplier_id: supplierId,
+        commodity: activeCommodity.name,
         message,
-        channel: "email",
+        confirmed: true,
+        channel: "whatsapp",
       }),
     });
+
     const data = await res.json();
-    if (data.success) {
-      setNotificationSent(true);
-      setNotificationLogId("NOTIF-849201");
+    if (data.sent) {
+      setNotificationSent(data.message);
+      setTimeout(() => setNotificationSent(null), 8000);
     }
   };
-
-  const triggerRefresh = () => {
-    setRefreshKey((k) => k + 1);
-  };
-
-  // Fetch warnings whenever location, scenario, or refreshKey changes
-  useEffect(() => {
-    let ignore = false;
-
-    async function executeFetch() {
-      setLoading(true);
-      try {
-        let url = `/api/warnings?province=${encodeURIComponent(
-          location.province
-        )}&city=${encodeURIComponent(location.city)}&district=${encodeURIComponent(
-          location.district
-        )}`;
-
-        if (scenario !== "LIVE") {
-          url += `&scenario=${scenario}`;
-        } else {
-          url += `&forceRefresh=true`;
-        }
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (!ignore) {
-          setMatchResult(data.matchResult);
-          setIsDemo(Boolean(data.isDemo));
-          setScenarioName(data.scenarioName);
-        }
-      } catch (err) {
-        if (!ignore) {
-          console.error("Failed to load warnings:", err);
-          setMatchResult({
-            matched: false,
-            status: "unavailable",
-            warning: null,
-            matchedLocation: null,
-            confidence: "no_match",
-            matchedField: null,
-            reason: "Koneksi ke endpoint peringatan terganggu.",
-            source: "BMKG",
-          });
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    executeFetch();
-
-    return () => {
-      ignore = true;
-    };
-  }, [location, scenario, refreshKey]);
-
-  // Pure derived state for actionPlan
-  const actionPlan = useMemo(() => {
-    if (matchResult && matchResult.status === "active") {
-      return buildRoleActionPlan({
-        warning: matchResult,
-        role: selectedRole,
-        context: { outdoor_event: isOutdoorEvent, participants: 150 },
-      });
-    }
-    return null;
-  }, [matchResult, selectedRole, isOutdoorEvent]);
-
-  const activeWarning =
-    matchResult?.status === "active" ? matchResult.warning : null;
-  const timeRemaining = activeWarning
-    ? getTimeRemaining(activeWarning.expires).text
-    : undefined;
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col">
-      <DashboardHeader isDemoMode={isDemo} scenarioName={scenarioName} />
+      <DashboardHeader
+        isDemoMode={true}
+        scenarioName={scenario !== "CUSTOM" ? DEMO_SCENARIOS[scenario].title : "Mode Bebas"}
+        city="Surabaya"
+        onOpenChat={() => setIsChatOpen(true)}
+      />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
-        {/* Real-time BMKG TEWS Earthquake Banner */}
-        <EarthquakeTicker />
+        {/* BPS Macro Food Inflation Ribbon */}
+        <InflationTicker />
 
-        {/* Scenario Selector Bar for Judges & Evaluators */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Hackathon Evaluation Scenario Selector Bar */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-            <FlaskConical className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
-            <span>Pilihan Skenario Evaluasi Hackathon:</span>
+            <FlaskConical className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+            <span>Skenario Demo Evaluasi Hackathon:</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setScenario("A")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+              onClick={() => handleSelectScenario("A")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                 scenario === "A"
-                  ? "bg-purple-600 text-white shadow-xs font-semibold"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
               }`}
             >
-              Skenario A (Peringatan Aktif Sukolilo)
+              Skenario A (Ayam Warteg Naik)
             </button>
             <button
               type="button"
-              onClick={() => setScenario("B")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+              onClick={() => handleSelectScenario("B")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                 scenario === "B"
-                  ? "bg-purple-600 text-white shadow-xs font-semibold"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
               }`}
             >
-              Skenario B (Lokasi Tidak Cocok)
+              Skenario B (Minyakita HET)
             </button>
             <button
               type="button"
-              onClick={() => setScenario("C")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+              onClick={() => handleSelectScenario("C")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                 scenario === "C"
-                  ? "bg-purple-600 text-white shadow-xs font-semibold"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
               }`}
             >
-              Skenario C (Kedaluwarsa)
+              Skenario C (Nego Cabai Rawit)
             </button>
             <button
               type="button"
-              onClick={() => setScenario("D")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                scenario === "D"
+              onClick={() => handleSelectScenario("CUSTOM")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                scenario === "CUSTOM"
                   ? "bg-purple-600 text-white shadow-xs font-semibold"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
               }`}
             >
-              Skenario D (BMKG Down)
-            </button>
-            <button
-              type="button"
-              onClick={() => setScenario("LIVE")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
-                scenario === "LIVE"
-                  ? "bg-blue-600 text-white shadow-xs font-semibold"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-              }`}
-            >
-              Live Feed BMKG
+              Eksplorasi Bebas
             </button>
           </div>
         </div>
 
-        {/* Quick Status Metrics Bar */}
+        {/* Business Profile Selector */}
+        <RoleSelector selectedRole={selectedRole} onSelectRole={setSelectedRole} />
+
+        {/* Quick Metrics Bar */}
         <QuickStatus
-          activeWarningCount={matchResult?.status === "active" ? 1 : 0}
-          recommendedActionCount={matchResult?.status === "active" ? 5 : 0}
-          teamsToNotifyCount={matchResult?.status === "active" ? 2 : 0}
-          timeRemainingText={timeRemaining}
+          totalCommodities={totalCommodities}
+          alertCount={alertCount}
+          avgMarginPct={avgMarginPct}
+          targetMarginPct={activeCommodity.targetMarginPct}
         />
 
-        {/* Location Selector */}
-        <LocationSelector
-          currentLocation={location}
-          onLocationChange={(newLoc) => setLocation(newLoc)}
-        />
-
-        {/* BMKG 3-Day Weather Forecast Baseline Ribbon */}
-        <WeatherForecastCard city={location.city} district={location.district} />
-
-        {/* Main Warning State Area */}
-        <div id="warning-section">
-          {loading ? (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center animate-pulse">
-              <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-3" />
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mx-auto mb-2" />
-              <div className="h-3 bg-slate-100 dark:bg-slate-700/50 rounded w-1/2 mx-auto" />
+        {/* Notification Feedback Toast Banner */}
+        {notificationSent && (
+          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100 flex items-center justify-between gap-3 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2.5 text-xs">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden="true" />
+              <div>
+                <strong>Aksi Terverifikasi:</strong> {notificationSent}
+              </div>
             </div>
-          ) : matchResult ? (
-            <>
-              {matchResult.status === "active" && (
-                <WarningStatusCard
-                  matchResult={matchResult}
-                  onGenerateActionPlan={() => {
-                    const el = document.getElementById("action-plan-section");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  }}
-                />
-              )}
+          </div>
+        )}
 
-              {matchResult.status === "no_match" && (
-                <EmptyWarningState
-                  location={location}
-                  onRefresh={triggerRefresh}
-                />
-              )}
-
-              {matchResult.status === "expired" && matchResult.warning && (
-                <ExpiredWarningState
-                  warning={matchResult.warning}
-                  onRefresh={triggerRefresh}
-                />
-              )}
-
-              {matchResult.status === "unavailable" && (
-                <WarningUnavailableState onRetry={triggerRefresh} />
-              )}
-            </>
-          ) : null}
+        {/* Interactive Deterministic Margin Calculator for Active Commodity */}
+        <div id="calculator-section">
+          <MarginCalculator
+            commodity={activeCommodity}
+            marginInput={currentInput}
+            marginResult={activeMarginResult}
+            marketPrice={activeMarketPrice}
+            onInputChange={handleInputChange}
+            onReset={handleResetInput}
+            onAskBob={() => setIsChatOpen(true)}
+          />
         </div>
 
-        {/* Action Plan Section */}
-        <div id="action-plan-section" className="space-y-4">
-          {notificationSent && (
-            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-300">
-              <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden="true" />
-                <div className="text-xs">
-                  <strong className="block font-bold">Status Eksekusi Selesai:</strong>
-                  <span>✓ Tim Lapangan Telah Dinotifikasi &nbsp;|&nbsp; ✓ Rencana Tindakan Terdaftar &nbsp;|&nbsp; ● Monitoring BMKG Aktif</span>
-                </div>
-              </div>
-              <span className="text-[11px] font-mono bg-emerald-200/60 dark:bg-emerald-900 px-2.5 py-1 rounded text-emerald-800 dark:text-emerald-200 font-semibold self-start sm:self-auto">
-                LOG ID: {notificationLogId || "NOTIF-849201"}
-              </span>
-            </div>
-          )}
+        {/* AI Action Recommendation Card */}
+        <ActionRecommendationCard
+          actionResult={actionResult}
+          commodityName={activeCommodity.name}
+          onOpenNegotiation={() => setIsNegotiateModalOpen(true)}
+        />
 
-          {actionPlan && matchResult?.status === "active" && (
-            <ActionPlanCard
-              actionPlan={actionPlan}
-              selectedRole={selectedRole}
-              onRoleChange={(newRole) => setSelectedRole(newRole)}
-              isOutdoorEvent={isOutdoorEvent}
-              onOutdoorToggle={(outdoor) => setIsOutdoorEvent(outdoor)}
-              onOpenConfirmation={() => setIsConfirmOpen(true)}
-            />
-          )}
+        {/* Commodity Grid (All 12 items) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              Pantauan Seluruh Komoditas Pokok ({totalCommodities} Bahan Pangan)
+            </h2>
+            <span className="text-xs text-slate-500">
+              Pilih komoditas untuk simulasi kalkulator di atas
+            </span>
+          </div>
+
+          <CommodityGrid
+            margins={allMargins}
+            marketPrices={marketPrices}
+            selectedCommodityId={activeCommodityId}
+            onSelectCommodity={(id) => {
+              setActiveCommodityId(id);
+              const el = document.getElementById("calculator-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            onAskBob={(id) => {
+              setActiveCommodityId(id);
+              setIsChatOpen(true);
+            }}
+          />
         </div>
       </main>
 
-      {/* Confirmation Modal */}
-      <ConfirmationDialog
-        isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
-        onConfirm={handleConfirmNotification}
-        defaultMessage={
-          matchResult?.warning
-            ? `Peringatan Dini Cuaca BMKG (${matchResult.warning.event}) aktif untuk wilayah ${location.district}, ${location.city} hingga pukul ${formatWibTime(matchResult.warning.expires)} WIB. Harap segera laksanakan SOP mitigasi kesiapsiagaan darurat.`
-            : "Peringatan cuaca BMKG aktif. Harap tindak lanjuti SOP kesiapsiagaan."
+      {/* Human-in-the-loop Supplier Negotiation Confirmation Modal */}
+      <SupplierNegotiateModal
+        isOpen={isNegotiateModalOpen}
+        supplier={activeSupplier}
+        commodityName={activeCommodity.name}
+        initialMessage={
+          actionResult.suggested_supplier_msg ||
+          `Halo ${activeSupplier?.contactPerson || "Supplier"}, mohon info harga grosir terbaik untuk ${activeCommodity.name}. Terima kasih.`
         }
+        onClose={() => setIsNegotiateModalOpen(false)}
+        onConfirm={handleConfirmSupplierNegotiation}
       />
 
-      {/* IBM Bob Copilot Side Panel / Toggle */}
+      {/* IBM Bob Copilot Slide-out Drawer */}
       <CopilotPanel
-        location={location}
-        role={selectedRole}
-        scenario={scenario}
-        isOutdoorEvent={isOutdoorEvent}
         isOpen={isChatOpen}
         onToggle={() => setIsChatOpen(!isChatOpen)}
+        role={selectedRole}
+        city="Surabaya"
+        activeCommodityId={activeCommodityId}
+        purchasePrice={currentInput.purchase_price}
+        transportCost={currentInput.transport_cost}
+        wastePct={currentInput.waste_pct}
+        sellingPrice={currentInput.selling_price}
+        scenarioId={scenario !== "CUSTOM" ? scenario : undefined}
       />
     </div>
   );

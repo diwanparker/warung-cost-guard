@@ -3,9 +3,9 @@ import "./globals.css";
 import { DisclaimerBanner } from "@/components/shared/DisclaimerBanner";
 
 export const metadata: Metadata = {
-  title: "SIAGA — BMKG Warning-to-Action Copilot",
+  title: "Warung Cost Guard — Copilot Harga Pangan & Margin Pedagang Kecil",
   description:
-    "Menerjemahkan peringatan dini cuaca resmi BMKG menjadi rencana tindakan operasional berbasis lokasi dan peran.",
+    "Solusi Smart Business & Productivity: Tahu biaya sebenarnya, harga pasar lokal SP2KP/PIHPS, margin riil, dan tindakan paling rasional sebelum mengubah harga jual.",
   icons: {
     icon: "/favicon.ico",
   },

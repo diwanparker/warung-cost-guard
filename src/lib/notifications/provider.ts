@@ -1,5 +1,5 @@
-import type { NotificationRequest, NotificationResult } from "@/types/action";
+import type { SupplierNotificationRequest, SupplierNotificationResult } from "@/types/supplier";
 
 export interface NotificationProvider {
-  send(request: NotificationRequest): Promise<NotificationResult>;
+  send(request: SupplierNotificationRequest): Promise<SupplierNotificationResult>;
 }

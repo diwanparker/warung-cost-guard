@@ -1,0 +1,198 @@
+{
+  "name": "Warung Cost Guard — Copilot Harga Pangan & Margin",
+  "description": "Orkestrasi MCP Tools & RAG SOP Penetapan Harga untuk IBM Bob & Langflow (Hacktiv8 x IBM SkillsBuild 2026)",
+  "flows": [
+    {
+      "id": "flow-get-market-prices",
+      "name": "Flow 1: get_market_prices",
+      "description": "Mengambil harga pasar lokal resmi (SP2KP, PIHPS, Bapanas) dengan normalisasi nama komoditas",
+      "data": {
+        "nodes": [
+          {
+            "id": "ChatInput-market",
+            "type": "ChatInput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": "{\"commodity\": \"ayam_ras\", \"city\": \"Surabaya\"}"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "PythonComponent-fetch-prices",
+            "type": "CustomComponent",
+            "data": {
+              "node": {
+                "template": {
+                  "code": "def fetch_market_prices(commodity: str, city: str = 'Surabaya'):\n    # Connect to SP2KP / PIHPS / Bapanas aggregator\n    return {'commodity': commodity, 'city': city, 'median_reference': 43000, 'unit': 'kg'}"
+                }
+              }
+            }
+          },
+          {
+            "id": "ChatOutput-market",
+            "type": "ChatOutput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": ""
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "flow-calculate-margin",
+      "name": "Flow 2: calculate_margin",
+      "description": "Perhitungan deterministik biaya efektif, susut, laba kotor, dan persentase margin riil",
+      "data": {
+        "nodes": [
+          {
+            "id": "ChatInput-margin",
+            "type": "ChatInput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": "{\"purchase_price\": 36500, \"transport_cost\": 1500, \"waste_pct\": 5, \"selling_price\": 45000}"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "PythonComponent-calc",
+            "type": "CustomComponent",
+            "data": {
+              "node": {
+                "template": {
+                  "code": "def calc_margin(purchase_price, transport_cost, waste_pct, selling_price):\n    eff_cost = round((purchase_price + transport_cost) / (1 - waste_pct / 100))\n    gross_profit = selling_price - eff_cost\n    margin_pct = round((gross_profit / selling_price) * 100, 2)\n    return {'effective_cost': eff_cost, 'gross_profit': gross_profit, 'gross_margin_pct': margin_pct}"
+                }
+              }
+            }
+          },
+          {
+            "id": "ChatOutput-margin",
+            "type": "ChatOutput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": ""
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "flow-suggest-price-action",
+      "name": "Flow 3: suggest_price_action",
+      "description": "Rekomendasi rasional berbasis SOP penetapan harga & LLM 9router 'Free'",
+      "data": {
+        "nodes": [
+          {
+            "id": "ChatInput-action",
+            "type": "ChatInput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": "Margin ayam ras 11.1%, harga pasar 43000, jual 45000"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "OpenAIModel-9router",
+            "type": "OpenAIModel",
+            "data": {
+              "node": {
+                "template": {
+                  "base_url": {
+                    "value": "https://9router.diwanparker.tech/v1"
+                  },
+                  "model_name": {
+                    "value": "Free"
+                  },
+                  "system_message": {
+                    "value": "Anda adalah Warung Cost Guard. Gunakan hanya angka dari tool. Berikan maksimal 3 opsi tindakan. Pisahkan fakta pasar, hasil kalkulasi, dan rekomendasi AI."
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "ChatOutput-action",
+            "type": "ChatOutput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": ""
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "flow-notify-supplier",
+      "name": "Flow 4: notify_supplier",
+      "description": "Pengiriman pesan negosiasi WhatsApp ke supplier dengan Human-in-the-Loop gatekeeper",
+      "data": {
+        "nodes": [
+          {
+            "id": "ChatInput-notify",
+            "type": "ChatInput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": "{\"supplier_id\": \"SUP-01\", \"confirmed\": true, \"message\": \"Draf pesan negosiasi\"}"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "SafetyGatekeeper-HITL",
+            "type": "CustomComponent",
+            "data": {
+              "node": {
+                "template": {
+                  "code": "def gatekeeper(confirmed, message, supplier_id):\n    if not confirmed:\n        raise ValueError('HUMAN_CONFIRMATION_REQUIRED: Otorisasi manusia wajib!')\n    return {'sent': True, 'channel': 'whatsapp', 'supplier_id': supplier_id}"
+                }
+              }
+            }
+          },
+          {
+            "id": "ChatOutput-notify",
+            "type": "ChatOutput",
+            "data": {
+              "node": {
+                "template": {
+                  "input_value": {
+                    "value": ""
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
