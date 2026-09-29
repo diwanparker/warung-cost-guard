@@ -1,0 +1,24 @@
+﻿{
+  "mcpServers": {
+    "langflow": {
+      "command": "uvx",
+      "args": [
+        "--with",
+        "mcp<2.0.0",
+        "mcp-proxy",
+        "--transport",
+        "streamablehttp",
+        "--headers",
+        "x-api-key",
+        "YOUR_LANGFLOW_API_KEY",
+        "http://localhost:7860/api/v1/mcp/project/YOUR_PROJECT_ID/streamable"
+      ],
+      "alwaysAllow": [
+        "warung_cost_guard",
+        "get_market_prices",
+        "calculate_margin",
+        "suggest_price_action"
+      ]
+    }
+  }
+}

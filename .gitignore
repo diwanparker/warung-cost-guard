@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IBM Bob local settings
+.bob/*
+!.bob/mcp.json.example

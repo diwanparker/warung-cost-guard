@@ -9,7 +9,7 @@ Warung Cost Guard mengadopsi arsitektur resmi hackathon:
 Model language inference di Langflow dikonfigurasikan menggunakan endpoint OpenAI-Compatible gratis:
 * **Base URL**: `https://9router.diwanparker.tech/v1`
 * **Model Name**: `"Free"`
-* **API Key**: `${OPENAI_API_KEY}` (atau `sk-a59a43ae56dc9a3f-u8fnth-d1f43a5d`)
+* **API Key**: `${OPENAI_API_KEY}` (atau kunci API OpenAI-compatible Anda)
 * **Temperature**: `0.3` (Konsisten & minim halusinasi)
 
 ---

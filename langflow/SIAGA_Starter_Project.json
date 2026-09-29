@@ -290,7 +290,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "api_key",
-                "value": "sk-a59a43ae56dc9a3f-u8fnth-d1f43a5d",
+                "value": "",
                 "display_name": "OpenAI API Key",
                 "advanced": false,
                 "api_editable": false,

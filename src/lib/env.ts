@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   OPENAI_BASE_URL: z.string().url().default("https://9router.diwanparker.tech/v1"),
-  OPENAI_API_KEY: z.string().optional().default("sk-a59a43ae56dc9a3f-u8fnth-d1f43a5d"),
+  OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_MODEL: z.string().default("Free"),
   BOB_API_KEY: z.string().optional(),
   BPS_API_KEY: z.string().optional(),
