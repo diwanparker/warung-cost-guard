@@ -14,7 +14,6 @@ Model language inference di Langflow dan aplikasi dirancang **provider-agnostic*
 | **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Inferensi ultra-cepat |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | `meta-llama/llama-3.1-8b-instruct` | Multi-model aggregator |
 | **Ollama (Lokal)** | `http://localhost:11434/v1` | `llama3` atau `mistral` | Offline, privasi penuh |
-| **9router (Demo Proxy)** | `https://9router.diwanparker.tech/v1` | `Free` | Alternatif proxy demo gratis |
 
 ### Parameter Node OpenAIModel di Langflow:
 * **OpenAI API Base**: Masukkan Base URL provider pilihan Anda (atau kosongkan untuk default OpenAI).

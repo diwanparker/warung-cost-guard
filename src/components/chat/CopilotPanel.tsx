@@ -143,7 +143,7 @@ export function CopilotPanel({
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">IBM Bob Copilot</h3>
               <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-bold">
-                9router / Langflow
+                MCP / Langflow
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">

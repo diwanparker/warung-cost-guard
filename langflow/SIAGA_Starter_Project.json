@@ -265,7 +265,7 @@
         }
       },
       {
-        "id": "OpenAIModel-9Router",
+        "id": "OpenAIModel-WarungCostGuard",
         "type": "genericNode",
         "dragging": false,
         "selected": true,
@@ -278,7 +278,7 @@
           "y": 350
         },
         "data": {
-          "id": "OpenAIModel-9Router",
+          "id": "OpenAIModel-WarungCostGuard",
           "type": "OpenAIModel",
           "node": {
             "template": {
@@ -456,7 +456,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "model_name",
-                "value": "Free",
+                "value": "gpt-4o-mini",
                 "display_name": "Model Name",
                 "advanced": false,
                 "api_editable": false,
@@ -480,7 +480,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "openai_api_base",
-                "value": "https://9router.diwanparker.tech/v1",
+                "value": "",
                 "display_name": "OpenAI API Base",
                 "advanced": true,
                 "api_editable": false,
@@ -623,13 +623,13 @@
               },
               "is_refresh": false
             },
-            "description": "Model Provider 9router locked ke model Free (bebas biaya)",
+            "description": "Model Provider OpenAI locked ke model Free (bebas biaya)",
             "icon": "OpenAI",
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
-            "display_name": "AI Reasoning (9Router: Free)",
+            "display_name": "AI Reasoning (OpenAI: Free)",
             "documentation": "",
             "minimized": false,
             "custom_fields": {},
@@ -1043,7 +1043,7 @@
           "node": {
             "display_name": "",
             "documentation": "",
-            "description": "### 🚀 SIAGA - BMKG Warning-to-Action Copilot (Hacktiv8 x IBM SkillsBuild)\n**Arsitektur Terintegrasi IBM Bob & Langflow**:\n1. **Input Pengguna & Lokasi Kampus**: Menerima peringatan BMKG atau pertanyaan civitas akademika kampus.\n2. **AI Reasoning (9Router: Free/Bayar)**: Melakukan penalaran LLM real-time dengan System Prompt SOP Bencana Kampus.\n3. **Rencana Tindakan (Action Plan)**: Menghasilkan 3 Prioritas mitigasi taktis yang terhubung langsung ke dashboard SIAGA via Copilot API!",
+            "description": "### 🚀 SIAGA - BMKG Warning-to-Action Copilot (Hacktiv8 x IBM SkillsBuild)\n**Arsitektur Terintegrasi IBM Bob & Langflow**:\n1. **Input Pengguna & Lokasi Kampus**: Menerima peringatan BMKG atau pertanyaan civitas akademika kampus.\n2. **AI Reasoning (OpenAI: Free/Bayar)**: Melakukan penalaran LLM real-time dengan System Prompt SOP Bencana Kampus.\n3. **Rencana Tindakan (Action Plan)**: Menghasilkan 3 Prioritas mitigasi taktis yang terhubung langsung ke dashboard SIAGA via Copilot API!",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -1056,11 +1056,11 @@
         "animated": false,
         "className": "",
         "selected": false,
-        "id": "reactflow__edge-ChatInput-baFmX{œdataTypeœ:œChatInputœ,œidœ:œChatInput-baFmXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-9Router{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9Routerœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-baFmX{œdataTypeœ:œChatInputœ,œidœ:œChatInput-baFmXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-WarungCostGuard{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WarungCostGuardœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-baFmX",
         "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-baFmXœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-9Router",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9Routerœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "target": "OpenAIModel-WarungCostGuard",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WarungCostGuardœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
@@ -1072,7 +1072,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-9Router",
+            "id": "OpenAIModel-WarungCostGuard",
             "inputTypes": [
               "Message"
             ],
@@ -1084,15 +1084,15 @@
         "animated": false,
         "className": "",
         "selected": false,
-        "id": "reactflow__edge-OpenAIModel-9Router{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9Routerœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Xu65b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Xu65bœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-9Router",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9Routerœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "id": "reactflow__edge-OpenAIModel-WarungCostGuard{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WarungCostGuardœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Xu65b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Xu65bœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-WarungCostGuard",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WarungCostGuardœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChatOutput-Xu65b",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Xu65bœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-9Router",
+            "id": "OpenAIModel-WarungCostGuard",
             "name": "text_output",
             "output_types": [
               "Message"

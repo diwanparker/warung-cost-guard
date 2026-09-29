@@ -36,7 +36,7 @@ flowchart LR
 
 1. **IBM Bob**: Bertindak sebagai agen percakapan ramah dan profesional yang mengidentifikasi konteks pedagang dan memanggil perkakas MCP yang tepat.
 2. **Model Context Protocol (MCP)**: Kontrak standar terbuka dengan 4 perkakas yang tervalidasi skema Zod ketat.
-3. **Langflow**: Mesin orkestrasi alur kerja (*workflow engine*) yang menghubungkan model bahasa (OpenAI / Groq / OpenRouter / Ollama / 9router), RAG SOP, dan komponen kalkulasi Python/TypeScript.
+3. **Langflow**: Mesin orkestrasi alur kerja (*workflow engine*) yang menghubungkan model bahasa (OpenAI / Groq / OpenRouter / Ollama), RAG SOP, dan komponen kalkulasi Python/TypeScript.
 4. **Flexible AI Model Inference**: Komponen OpenAI-Compatible agnostik yang dapat diarahkan ke penyedia LLM mana pun sesuai preferensi pengguna.
 
 ---
