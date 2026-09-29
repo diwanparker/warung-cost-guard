@@ -68,7 +68,7 @@ export class BobCopilotProvider implements AgentProvider {
       },
     ];
 
-    // 2. Try calling 9router OpenAI-Compatible LLM
+    // 2. Try calling configured OpenAI-Compatible LLM (OpenAI, Groq, Ollama, etc.)
     try {
       const systemPrompt = `Anda adalah Warung Cost Guard, Copilot Harga Pangan & Margin untuk pedagang kecil Indonesia.
 ATURAN UTAMA:
@@ -139,7 +139,7 @@ Susun respons terstruktur untuk pedagang sesuai format wajib di atas.`;
         }
       }
     } catch (e) {
-      console.warn("9router endpoint unavailable or timed out, using structured template fallback:", e);
+      console.warn("LLM endpoint unavailable or timed out, using structured template fallback:", e);
     }
 
     // 3. Fallback: High-quality structured response adhering strictly to the prompt guidelines

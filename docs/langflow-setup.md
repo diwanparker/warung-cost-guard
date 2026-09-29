@@ -5,12 +5,22 @@ Warung Cost Guard mengadopsi arsitektur resmi hackathon:
 
 ---
 
-## 1. Konfigurasi Endpoint Model Provider (9router)
-Model language inference di Langflow dikonfigurasikan menggunakan endpoint OpenAI-Compatible gratis:
-* **Base URL**: `https://9router.diwanparker.tech/v1`
-* **Model Name**: `"Free"`
-* **API Key**: `${OPENAI_API_KEY}` (atau kunci API OpenAI-compatible Anda)
-* **Temperature**: `0.3` (Konsisten & minim halusinasi)
+## 1. Konfigurasi Endpoint Model Provider (Bebas / Agnostik)
+Model language inference di Langflow dan aplikasi dirancang **provider-agnostic** menggunakan standar OpenAI-Compatible API. Pengguna atau evaluator **bebas menggunakan model AI dan penyedia layanan apapun**:
+
+| Provider | Base URL | Rekomendasi Model Name | Keterangan |
+| :--- | :--- | :--- | :--- |
+| **OpenAI (Resmi)** | `https://api.openai.com/v1` | `gpt-4o-mini` atau `gpt-4o` | Standar industri |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Inferensi ultra-cepat |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `meta-llama/llama-3.1-8b-instruct` | Multi-model aggregator |
+| **Ollama (Lokal)** | `http://localhost:11434/v1` | `llama3` atau `mistral` | Offline, privasi penuh |
+| **9router (Demo Proxy)** | `https://9router.diwanparker.tech/v1` | `Free` | Alternatif proxy demo gratis |
+
+### Parameter Node OpenAIModel di Langflow:
+* **OpenAI API Base**: Masukkan Base URL provider pilihan Anda (atau kosongkan untuk default OpenAI).
+* **Model Name**: Masukkan nama model pilihan Anda (contoh: `gpt-4o-mini`, `llama-3.3-70b-versatile`, dll.).
+* **API Key**: `${OPENAI_API_KEY}` atau kunci API dari provider pilihan Anda.
+* **Temperature**: `0.3` (Disarankan rendah agar konsisten & minim halusinasi).
 
 ---
 
@@ -22,7 +32,7 @@ flowchart TD
     B --> C[Deterministic Margin Calculator]
     C --> D[Knowledge Base / RAG SOP Penetapan Harga]
     D --> E[Prompt Template]
-    E --> F[OpenAIModel: 9router 'Free']
+    E --> F[OpenAIModel: Flexible OpenAI-Compatible LLM]
     F --> G[Structured JSON / Safety Validator]
     G --> H[Chat Output / MCP Response]
 ```

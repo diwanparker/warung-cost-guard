@@ -2,7 +2,7 @@
 
 > **Hacktiv8 × IBM SkillsBuild National Hackathon 2026**  
 > **Tema:** Produktivitas & Bisnis Cerdas (*Productivity & Smart Business*)  
-> **Integrasi Utama:** IBM Bob + Langflow + Model Context Protocol (MCP) + 9router (`Free`)
+> **Integrasi Utama:** IBM Bob + Langflow + Model Context Protocol (MCP) + Flexible OpenAI-Compatible LLM
 
 ---
 
@@ -36,8 +36,8 @@ flowchart LR
 
 1. **IBM Bob**: Bertindak sebagai agen percakapan ramah dan profesional yang mengidentifikasi konteks pedagang dan memanggil perkakas MCP yang tepat.
 2. **Model Context Protocol (MCP)**: Kontrak standar terbuka dengan 4 perkakas yang tervalidasi skema Zod ketat.
-3. **Langflow**: Mesin orkestrasi alur kerja (*workflow engine*) yang menghubungkan LLM 9router (`Free`), RAG SOP, dan komponen kalkulasi Python/TypeScript.
-4. **9router Inference (`Free`)**: Endpoint OpenAI-Compatible bebas biaya yang dikonfigurasikan di `https://9router.diwanparker.tech/v1`.
+3. **Langflow**: Mesin orkestrasi alur kerja (*workflow engine*) yang menghubungkan model bahasa (OpenAI / Groq / OpenRouter / Ollama / 9router), RAG SOP, dan komponen kalkulasi Python/TypeScript.
+4. **Flexible AI Model Inference**: Komponen OpenAI-Compatible agnostik yang dapat diarahkan ke penyedia LLM mana pun sesuai preferensi pengguna.
 
 ---
 

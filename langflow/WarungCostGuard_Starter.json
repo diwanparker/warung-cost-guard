@@ -623,13 +623,13 @@
               },
               "is_refresh": false
             },
-            "description": "Model Provider 9router locked ke model Free (OpenAI-compatible)",
+            "description": "Model Provider fleksibel (OpenAI / Groq / OpenRouter / Ollama / 9router)",
             "icon": "OpenAI",
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
-            "display_name": "AI Reasoning (9Router: Free)",
+            "display_name": "AI Reasoning (OpenAI-Compatible LLM)",
             "documentation": "",
             "minimized": false,
             "custom_fields": {},
@@ -1043,7 +1043,7 @@
           "node": {
             "display_name": "",
             "documentation": "",
-            "description": "### 🛒 Warung Cost Guard — Copilot Harga Pangan & Margin (Hacktiv8 x IBM SkillsBuild)\n**Arsitektur Terintegrasi IBM Bob & Langflow**:\n1. **Chat Input**: Menerima data kulakan, ongkos angkut, persentase susut, dan harga jual pedagang.\n2. **AI Reasoning (9Router: Free / OpenAI)**: Melakukan penalaran real-time berbasis SOP penetapan harga, pencegahan kartel (UU No. 5/1999), dan batas HET pemerintah.\n3. **Chat Output**: Mengembalikan analisis perbandingan harga pasar lokal & 3 opsi rekomendasi rasional ke IBM Bob!",
+            "description": "### 🛒 Warung Cost Guard — Copilot Harga Pangan & Margin (Hacktiv8 x IBM SkillsBuild)\n**Arsitektur Terintegrasi IBM Bob & Langflow**:\n1. **Chat Input**: Menerima data kulakan, ongkos angkut, persentase susut, dan harga jual pedagang.\n2. **AI Reasoning (OpenAI-Compatible LLM)**: Fleksibel menggunakan provider LLM apa pun (OpenAI, Groq, Ollama, OpenRouter, dll) dengan penalaran SOP penetapan harga, batas HET, dan pencegahan kartel (UU No. 5/1999).\n3. **Chat Output**: Mengembalikan analisis perbandingan harga pasar lokal & 3 opsi rekomendasi rasional ke IBM Bob!",
             "template": {
               "backgroundColor": "neutral"
             }

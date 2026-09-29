@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  OPENAI_BASE_URL: z.string().url().default("https://9router.diwanparker.tech/v1"),
+  OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
   OPENAI_API_KEY: z.string().optional().default(""),
-  OPENAI_MODEL: z.string().default("Free"),
+  OPENAI_MODEL: z.string().default("gpt-4o-mini"),
   BOB_API_KEY: z.string().optional(),
   BPS_API_KEY: z.string().optional(),
   BPS_BASE_URL: z.string().url().default("https://webapi.bps.go.id/v1/api"),
